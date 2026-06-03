@@ -16,13 +16,17 @@ interface UserRow {
 
 const COOKIE_NAME = 'auth_token';
 
-function cookieOptions() {
-  const isProduction = process.env.NODE_ENV === 'production';
+function isHttpsRequest(req: Request): boolean {
+  return req.secure || req.get('x-forwarded-proto') === 'https';
+}
+
+function cookieOptions(req: Request) {
+  const isHttps = isHttpsRequest(req);
 
   return {
     httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' as const : 'strict' as const,
+    secure: isHttps,
+    sameSite: isHttps ? 'none' as const : 'strict' as const,
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: '/',
   };
@@ -103,7 +107,7 @@ export async function login(req: Request, res: Response): Promise<void> {
     { expiresIn: '7d' },
   );
 
-  res.cookie(COOKIE_NAME, token, cookieOptions());
+  res.cookie(COOKIE_NAME, token, cookieOptions(req));
   res.json({
     user: {
       id: user.id,
@@ -115,11 +119,13 @@ export async function login(req: Request, res: Response): Promise<void> {
   });
 }
 
-export function logout(_req: Request, res: Response): void {
+export function logout(req: Request, res: Response): void {
+  const isHttps = isHttpsRequest(req);
+
   res.clearCookie(COOKIE_NAME, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+    secure: isHttps,
+    sameSite: isHttps ? 'none' : 'strict',
     path: '/',
   });
   res.json({ message: 'Logged out successfully' });

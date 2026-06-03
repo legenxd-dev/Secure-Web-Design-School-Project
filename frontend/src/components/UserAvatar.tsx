@@ -1,6 +1,9 @@
 import styles from './UserAvatar.module.css';
 
-const AVATAR_BASE = `${import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000'}/uploads/avatars/`;
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? (
+  import.meta.env.PROD ? window.location.origin : 'http://localhost:4000'
+);
+const AVATAR_BASE = `${apiBaseUrl}/uploads/avatars/`;
 
 interface Props {
   username: string;

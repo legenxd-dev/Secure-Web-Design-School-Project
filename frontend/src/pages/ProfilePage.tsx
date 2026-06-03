@@ -8,7 +8,10 @@ import ErrorMessage from '../components/ErrorMessage';
 import { getApiError } from '../utils/apiError';
 import styles from './Profile.module.css';
 
-const AVATAR_BASE = `${import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000'}/uploads/avatars/`;
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? (
+  import.meta.env.PROD ? window.location.origin : 'http://localhost:4000'
+);
+const AVATAR_BASE = `${apiBaseUrl}/uploads/avatars/`;
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
@@ -37,12 +40,24 @@ export default function ProfilePage() {
   const [savingPwd, setSavingPwd] = useState(false);
 
   useEffect(() => {
-    apiClient.get<User>('/api/users/me').then((res) => {
-      setProfile(res.data);
-      updateUser(res.data);
-      setEditUsername(res.data.username);
-      setEditEmail(res.data.email);
-    });
+    let cancelled = false;
+
+    apiClient.get<User>('/api/users/me')
+      .then((res) => {
+        if (cancelled) return;
+        setProfile(res.data);
+        updateUser(res.data);
+        setEditUsername(res.data.username);
+        setEditEmail(res.data.email);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setProfileErr(getApiError(err));
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [updateUser]);
 
   useEffect(() => {

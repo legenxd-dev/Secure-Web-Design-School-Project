@@ -20,12 +20,8 @@ declare global {
 }
 
 function clearAuthCookie(res: Response): void {
-  const isProduction = process.env.NODE_ENV === 'production';
-
   res.clearCookie(COOKIE_NAME, {
     httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'strict',
     path: '/',
   });
 }
