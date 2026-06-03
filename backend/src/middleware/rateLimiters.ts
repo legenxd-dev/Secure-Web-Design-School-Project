@@ -2,11 +2,11 @@ import rateLimit from 'express-rate-limit';
 
 // Brute-force protection for login/register — strict by design
 export const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
+  windowMs: 2 * 60 * 1000,
+  max: 30,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Too many authentication attempts. Please wait 15 minutes and try again.' },
+  message: { error: 'Too many authentication attempts. Please wait 2 minutes and try again.' },
 });
 
 export const uploadLimiter = rateLimit({

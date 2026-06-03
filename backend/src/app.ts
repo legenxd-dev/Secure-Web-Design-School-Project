@@ -5,7 +5,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 
-import { authLimiter, uploadLimiter, apiLimiter } from './middleware/rateLimiters';
+import { uploadLimiter, apiLimiter } from './middleware/rateLimiters';
 import { requireTrustedOrigin } from './middleware/originGuard.middleware';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
@@ -48,7 +48,7 @@ app.use(express.json({ limit: '50kb' }));
 
 app.use('/api', requireTrustedOrigin);
 app.use('/api', apiLimiter);
-app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/scan', uploadLimiter, scanRoutes);
 app.use('/api/messages', messagesRoutes);
