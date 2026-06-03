@@ -12,6 +12,8 @@ import {
   VTUploadResponse,
 } from '../utils/virustotal';
 import { validateImageMagicBytes, validatePdfMagicBytes } from '../utils/fileValidation';
+import { canModerate } from '../middleware/auth.middleware';
+import { cleanText } from '../utils/text';
 
 const FILES_DIR = path.join(process.cwd(), 'uploads', 'files');
 
@@ -79,15 +81,18 @@ export async function uploadFile(req: Request, res: Response): Promise<void> {
 
   const { title, description } = req.body as { title?: string; description?: string };
 
-  if (!title || title.trim().length === 0) {
+  const safeTitle = cleanText(title ?? '');
+  const safeDescription = cleanText(description ?? '');
+
+  if (!safeTitle) {
     res.status(400).json({ error: 'Title is required' });
     return;
   }
-  if (title.length > 200) {
+  if (safeTitle.length > 200) {
     res.status(400).json({ error: 'Title must be 200 characters or fewer' });
     return;
   }
-  if ((description ?? '').length > 1000) {
+  if (safeDescription.length > 1000) {
     res.status(400).json({ error: 'Description must be 1000 characters or fewer' });
     return;
   }
@@ -141,7 +146,7 @@ export async function uploadFile(req: Request, res: Response): Promise<void> {
 
       const insertResult = await pool.query<{ id: number }>(
         'INSERT INTO files (user_id, title, description, filename, original_name, mime_type, size, scan_status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id',
-        [req.user!.sub, title.trim(), (description ?? '').trim(), safeFilename, originalname, mimetype, size, 'clean'],
+        [req.user!.sub, safeTitle, safeDescription, safeFilename, originalname, mimetype, size, 'clean'],
       );
       const file = (await pool.query<FileRow>(`${SELECT_FILES} WHERE f.id = $1`, [insertResult.rows[0].id])).rows[0];
       res.status(201).json(file);
@@ -173,7 +178,7 @@ export async function uploadFile(req: Request, res: Response): Promise<void> {
 
     const insertResult = await pool.query<{ id: number }>(
       'INSERT INTO files (user_id, title, description, filename, original_name, mime_type, size, scan_status, vt_analysis_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id',
-      [req.user!.sub, title.trim(), (description ?? '').trim(), safeFilename, originalname, mimetype, size, 'pending', analysisId],
+      [req.user!.sub, safeTitle, safeDescription, safeFilename, originalname, mimetype, size, 'pending', analysisId],
     );
     const file = (await pool.query<FileRow>(`${SELECT_FILES} WHERE f.id = $1`, [insertResult.rows[0].id])).rows[0];
     res.status(201).json(file);
@@ -306,7 +311,7 @@ export async function deleteFile(req: Request, res: Response): Promise<void> {
   const file = result.rows[0];
 
   if (!file) { res.status(404).json({ error: 'File not found' }); return; }
-  if (file.user_id !== req.user!.sub) {
+  if (!canModerate(req, file.user_id)) {
     res.status(403).json({ error: 'You can only delete your own files' });
     return;
   }

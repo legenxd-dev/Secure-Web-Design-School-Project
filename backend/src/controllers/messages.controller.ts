@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import pool from '../db/database';
+import { canModerate } from '../middleware/auth.middleware';
+import { cleanText } from '../utils/text';
 
 interface MessageRow {
   id: number;
@@ -40,26 +42,29 @@ export async function getMessages(_req: Request, res: Response): Promise<void> {
 export async function postMessage(req: Request, res: Response): Promise<void> {
   const { title, content } = req.body as { title?: string; content?: string };
 
-  if (!title || title.trim().length === 0) {
+  const safeTitle = cleanText(title ?? '');
+  const safeContent = cleanText(content ?? '');
+
+  if (!safeTitle) {
     res.status(400).json({ error: 'Title is required' });
     return;
   }
-  if (title.length > 200) {
+  if (safeTitle.length > 200) {
     res.status(400).json({ error: 'Title must be 200 characters or fewer' });
     return;
   }
-  if (!content || content.trim().length === 0) {
+  if (!safeContent) {
     res.status(400).json({ error: 'Content is required' });
     return;
   }
-  if (content.length > 5000) {
+  if (safeContent.length > 5000) {
     res.status(400).json({ error: 'Content must be 5000 characters or fewer' });
     return;
   }
 
   const insertResult = await pool.query<{ id: number }>(
     'INSERT INTO messages (user_id, title, content) VALUES ($1, $2, $3) RETURNING id',
-    [req.user!.sub, title.trim(), content.trim()],
+    [req.user!.sub, safeTitle, safeContent],
   );
   const newId = insertResult.rows[0].id;
 
@@ -83,7 +88,7 @@ export async function deleteMessage(req: Request, res: Response): Promise<void> 
     res.status(404).json({ error: 'Message not found' });
     return;
   }
-  if (message.user_id !== req.user!.sub) {
+  if (!canModerate(req, message.user_id)) {
     res.status(403).json({ error: 'You can only delete your own posts' });
     return;
   }

@@ -8,6 +8,7 @@ export interface JwtPayload {
   sub: number;
   username: string;
   pv?: number;
+  role: 'user' | 'admin';
 }
 
 declare global {
@@ -47,8 +48,8 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   }
 
   try {
-    const result = await pool.query<{ password_version: number }>(
-      'SELECT password_version FROM users WHERE id = $1',
+    const result = await pool.query<{ password_version: number; role: 'user' | 'admin' | null }>(
+      'SELECT password_version, role FROM users WHERE id = $1',
       [payload.sub],
     );
     const dbUser = result.rows[0];
@@ -59,6 +60,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       res.status(401).json({ error: 'Session expired. Please log in again.' });
       return;
     }
+    payload.role = dbUser.role === 'admin' ? 'admin' : 'user';
   } catch {
     res.status(500).json({ error: 'Internal server error' });
     return;
@@ -66,4 +68,8 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
   req.user = payload;
   next();
+}
+
+export function canModerate(req: Request, ownerId: number): boolean {
+  return req.user?.role === 'admin' || ownerId === req.user?.sub;
 }

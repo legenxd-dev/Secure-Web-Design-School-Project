@@ -10,6 +10,7 @@ interface UserRow {
   email: string;
   password_hash: string;
   password_version: number | null;
+  role: 'user' | 'admin' | null;
   avatar: string | null;
 }
 
@@ -92,7 +93,12 @@ export async function login(req: Request, res: Response): Promise<void> {
   }
 
   const token = jwt.sign(
-    { sub: user.id, username: user.username, pv: Number(user.password_version ?? 0) },
+    {
+      sub: user.id,
+      username: user.username,
+      pv: Number(user.password_version ?? 0),
+      role: user.role === 'admin' ? 'admin' : 'user',
+    },
     process.env.JWT_SECRET!,
     { expiresIn: '7d' },
   );
@@ -103,6 +109,7 @@ export async function login(req: Request, res: Response): Promise<void> {
       id: user.id,
       username: user.username,
       email: user.email,
+      role: user.role === 'admin' ? 'admin' : 'user',
       avatar: user.avatar,
     },
   });

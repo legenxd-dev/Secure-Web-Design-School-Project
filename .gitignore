@@ -2,6 +2,7 @@
 node_modules/
 .claude 
 docs-dontpush-/
+docs/
 
 # Environment files — never commit real secrets
 .env

@@ -15,6 +15,7 @@ export async function initDb(): Promise<void> {
       email            TEXT    NOT NULL UNIQUE,
       password_hash    TEXT    NOT NULL,
       password_version INTEGER NOT NULL DEFAULT 0,
+      role             TEXT    NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
       avatar           TEXT    DEFAULT NULL,
       created_at       TIMESTAMPTZ DEFAULT NOW()
     )
@@ -28,6 +29,21 @@ export async function initDb(): Promise<void> {
   await pool.query(`
     ALTER TABLE users
     ADD COLUMN IF NOT EXISTS avatar TEXT DEFAULT NULL
+  `);
+
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user'
+  `);
+
+  await pool.query(`
+    DO $$
+    BEGIN
+      ALTER TABLE users
+      ADD CONSTRAINT users_role_check CHECK (role IN ('user', 'admin'));
+    EXCEPTION
+      WHEN duplicate_object THEN NULL;
+    END $$;
   `);
 
   await pool.query(`

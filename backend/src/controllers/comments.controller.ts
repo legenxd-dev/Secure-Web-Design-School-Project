@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import pool from '../db/database';
+import { canModerate } from '../middleware/auth.middleware';
+import { cleanText } from '../utils/text';
 
 interface CommentRow {
   id: number;
@@ -50,11 +52,13 @@ export async function postComment(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  if (!content || content.trim().length === 0) {
+  const safeContent = cleanText(content ?? '');
+
+  if (!safeContent) {
     res.status(400).json({ error: 'Comment content is required' });
     return;
   }
-  if (content.length > 2000) {
+  if (safeContent.length > 2000) {
     res.status(400).json({ error: 'Comment must be 2000 characters or fewer' });
     return;
   }
@@ -67,7 +71,7 @@ export async function postComment(req: Request, res: Response): Promise<void> {
 
   const insertResult = await pool.query<{ id: number }>(
     'INSERT INTO comments (post_type, post_id, user_id, content) VALUES ($1, $2, $3, $4) RETURNING id',
-    [postType, postId, req.user!.sub, content.trim()],
+    [postType, postId, req.user!.sub, safeContent],
   );
   const newId = insertResult.rows[0].id;
 
@@ -91,7 +95,7 @@ export async function deleteComment(req: Request, res: Response): Promise<void> 
     res.status(404).json({ error: 'Comment not found' });
     return;
   }
-  if (comment.user_id !== req.user!.sub) {
+  if (!canModerate(req, comment.user_id)) {
     res.status(403).json({ error: 'You can only delete your own comments' });
     return;
   }

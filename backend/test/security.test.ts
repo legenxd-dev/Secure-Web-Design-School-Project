@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, it } from 'node:test';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import request from 'supertest';
 import app from '../src/app';
@@ -91,6 +92,29 @@ describe('security behavior', () => {
     assert.equal(res.body.error, 'Invalid credentials');
   });
 
+  it('returns the database-backed role after login', async () => {
+    const passwordHash = await bcrypt.hash('averystrongpassword', 4);
+    mockQuery(async () => ({
+      rows: [{
+        id: 1,
+        username: 'alice',
+        email: 'alice@example.com',
+        password_hash: passwordHash,
+        password_version: 0,
+        role: 'admin',
+        avatar: null,
+      }],
+    }));
+
+    const res = await request(app)
+      .post('/api/auth/login')
+      .set('Origin', FRONTEND_ORIGIN)
+      .send({ email: 'alice@example.com', password: 'averystrongpassword' });
+
+    assert.equal(res.status, 200);
+    assert.equal(res.body.user.role, 'admin');
+  });
+
   it('protects authenticated routes when no cookie is present', async () => {
     const res = await request(app).get('/api/users/me');
 
@@ -111,6 +135,29 @@ describe('security behavior', () => {
     assert.match(cookieHeader, /auth_token=;/);
   });
 
+  it('returns the database-backed role for the current user', async () => {
+    const results = [
+      { rows: [{ password_version: 0, role: 'admin' }] },
+      {
+        rows: [{
+          id: 1,
+          username: 'alice',
+          email: 'alice@example.com',
+          role: 'admin',
+          avatar: null,
+        }],
+      },
+    ];
+    mockQuery(async () => results.shift() ?? { rows: [] });
+
+    const res = await request(app)
+      .get('/api/users/me')
+      .set('Cookie', authCookie(1, 0));
+
+    assert.equal(res.status, 200);
+    assert.equal(res.body.role, 'admin');
+  });
+
   it('prevents deleting another user message', async () => {
     const results = [
       { rows: [{ password_version: 0 }] },
@@ -124,6 +171,54 @@ describe('security behavior', () => {
       .set('Cookie', authCookie(1, 0));
 
     assert.equal(res.status, 403);
+  });
+
+  it('allows admins to delete another user message', async () => {
+    const results = [
+      { rows: [{ password_version: 0, role: 'admin' }] },
+      { rows: [{ user_id: 2 }] },
+      { rows: [] },
+    ];
+    mockQuery(async () => results.shift() ?? { rows: [] });
+
+    const res = await request(app)
+      .delete('/api/messages/10')
+      .set('Origin', FRONTEND_ORIGIN)
+      .set('Cookie', authCookie(1, 0));
+
+    assert.equal(res.status, 204);
+  });
+
+  it('allows admins to delete another user comment', async () => {
+    const results = [
+      { rows: [{ password_version: 0, role: 'admin' }] },
+      { rows: [{ user_id: 2 }] },
+      { rows: [] },
+    ];
+    mockQuery(async () => results.shift() ?? { rows: [] });
+
+    const res = await request(app)
+      .delete('/api/messages/10/comments/5')
+      .set('Origin', FRONTEND_ORIGIN)
+      .set('Cookie', authCookie(1, 0));
+
+    assert.equal(res.status, 204);
+  });
+
+  it('allows admins to delete another user file', async () => {
+    const results = [
+      { rows: [{ password_version: 0, role: 'admin' }] },
+      { rows: [{ user_id: 2, filename: 'missing.pdf' }] },
+      { rows: [] },
+    ];
+    mockQuery(async () => results.shift() ?? { rows: [] });
+
+    const res = await request(app)
+      .delete('/api/files/10')
+      .set('Origin', FRONTEND_ORIGIN)
+      .set('Cookie', authCookie(1, 0));
+
+    assert.equal(res.status, 204);
   });
 
   it('fails file sharing closed when VirusTotal is not configured', async () => {

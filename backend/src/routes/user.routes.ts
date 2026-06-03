@@ -5,6 +5,7 @@ import { getMe, updateProfile, changePassword, uploadAvatar } from '../controlle
 import { requireAuth } from '../middleware/auth.middleware';
 import { uploadMiddleware } from '../middleware/upload.middleware';
 import { handleValidationErrors } from '../middleware/validate.middleware';
+import { uploadLimiter } from '../middleware/rateLimiters';
 
 const router = Router();
 
@@ -36,6 +37,7 @@ router.post('/me/password', requireAuth, changePassword);
 
 router.post(
   '/me/avatar',
+  uploadLimiter,
   requireAuth,
   (req: Request, res: Response, next: NextFunction) => {
     uploadMiddleware.single('avatar')(req, res, (err) => {

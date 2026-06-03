@@ -10,13 +10,23 @@ interface UserRow {
   id: number;
   username: string;
   email: string;
-  password_hash: string;
+  role: 'user' | 'admin' | null;
   avatar: string | null;
+}
+
+function publicUser(user: UserRow) {
+  return {
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    role: user.role === 'admin' ? 'admin' : 'user',
+    avatar: user.avatar,
+  };
 }
 
 export async function getMe(req: Request, res: Response): Promise<void> {
   const result = await pool.query<UserRow>(
-    'SELECT id, username, email, avatar FROM users WHERE id = $1',
+    'SELECT id, username, email, role, avatar FROM users WHERE id = $1',
     [req.user!.sub],
   );
   const user = result.rows[0];
@@ -24,7 +34,7 @@ export async function getMe(req: Request, res: Response): Promise<void> {
     res.status(404).json({ error: 'User not found' });
     return;
   }
-  res.json(user);
+  res.json(publicUser(user));
 }
 
 export async function updateProfile(req: Request, res: Response): Promise<void> {
@@ -52,10 +62,10 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
   }
 
   const updated = await pool.query<UserRow>(
-    'SELECT id, username, email, avatar FROM users WHERE id = $1',
+    'SELECT id, username, email, role, avatar FROM users WHERE id = $1',
     [req.user!.sub],
   );
-  res.json(updated.rows[0]);
+  res.json(publicUser(updated.rows[0]));
 }
 
 export async function changePassword(req: Request, res: Response): Promise<void> {
@@ -138,8 +148,8 @@ export async function uploadAvatar(req: Request, res: Response): Promise<void> {
   await pool.query('UPDATE users SET avatar = $1 WHERE id = $2', [safeFilename, req.user!.sub]);
 
   const updated = await pool.query<UserRow>(
-    'SELECT id, username, email, avatar FROM users WHERE id = $1',
+    'SELECT id, username, email, role, avatar FROM users WHERE id = $1',
     [req.user!.sub],
   );
-  res.json(updated.rows[0]);
+  res.json(publicUser(updated.rows[0]));
 }
