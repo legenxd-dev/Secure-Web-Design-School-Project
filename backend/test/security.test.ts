@@ -183,6 +183,38 @@ describe('security behavior', () => {
     assert.equal(res.body.role, 'admin');
   });
 
+  it('intentionally allows profile role escalation for the security report demo', async () => {
+    const calls: string[] = [];
+    const results = [
+      { rows: [{ password_version: 0, role: 'user' }] },
+      { rows: [] },
+      { rows: [] },
+      {
+        rows: [{
+          id: 1,
+          username: 'alice',
+          email: 'alice@example.com',
+          role: 'admin',
+          avatar: null,
+        }],
+      },
+    ];
+    mockQuery(async (sql) => {
+      calls.push(sql);
+      return results.shift() ?? { rows: [] };
+    });
+
+    const res = await request(app)
+      .patch('/api/users/me')
+      .set('Origin', FRONTEND_ORIGIN)
+      .set('Cookie', authCookie(1, 0))
+      .send({ role: 'admin' });
+
+    assert.equal(res.status, 200);
+    assert.equal(res.body.role, 'admin');
+    assert.ok(calls.some((sql) => sql.includes('UPDATE users SET role = $1 WHERE id = $2')));
+  });
+
   it('prevents deleting another user message', async () => {
     const results = [
       { rows: [{ password_version: 0 }] },

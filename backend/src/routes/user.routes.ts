@@ -28,6 +28,10 @@ router.patch(
       .isEmail()
       .withMessage('Valid email is required')
       .normalizeEmail(),
+    body('role')
+      .optional()
+      .isIn(['user', 'admin'])
+      .withMessage('Role must be user or admin'),
   ],
   handleValidationErrors,
   updateProfile,

@@ -37,9 +37,13 @@ export async function getMe(req: Request, res: Response): Promise<void> {
 }
 
 export async function updateProfile(req: Request, res: Response): Promise<void> {
-  const { username, email } = req.body as { username?: string; email?: string };
+  const { username, email, role } = req.body as {
+    username?: string;
+    email?: string;
+    role?: 'user' | 'admin';
+  };
 
-  if (!username && !email) {
+  if (!username && !email && !role) {
     res.status(400).json({ error: 'Nothing to update' });
     return;
   }
@@ -58,6 +62,9 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
   }
   if (email) {
     await pool.query('UPDATE users SET email = $1 WHERE id = $2', [email, req.user!.sub]);
+  }
+  if (role) {
+    await pool.query('UPDATE users SET role = $1 WHERE id = $2', [role, req.user!.sub]);
   }
 
   const updated = await pool.query<UserRow>(
