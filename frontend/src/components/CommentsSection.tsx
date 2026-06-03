@@ -3,6 +3,7 @@ import apiClient from '../api/client';
 import { useAuth } from '../context/useAuth';
 import ErrorMessage from './ErrorMessage';
 import { getApiError } from '../utils/apiError';
+import { formatDateTime } from '../utils/date';
 import styles from './CommentsSection.module.css';
 
 interface Comment {
@@ -16,10 +17,6 @@ interface Comment {
 interface Props {
   postType: 'message' | 'file';
   postId: number;
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso + 'Z').toLocaleString();
 }
 
 export default function CommentsSection({ postType, postId }: Props) {
@@ -119,7 +116,7 @@ export default function CommentsSection({ postType, postId }: Props) {
               <div className={styles.commentBody}>
                 <div className={styles.commentHeader}>
                   <span className={styles.commentAuthor}>{c.username}</span>
-                  <span className={styles.commentDate}>{formatDate(c.created_at)}</span>
+                  <span className={styles.commentDate}>{formatDateTime(c.created_at)}</span>
                   {user?.id === c.user_id && (
                     <button
                       className={styles.deleteBtn}

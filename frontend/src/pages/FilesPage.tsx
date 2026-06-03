@@ -5,6 +5,7 @@ import { useAuth } from '../context/useAuth';
 import Topbar from '../components/Topbar';
 import ErrorMessage from '../components/ErrorMessage';
 import { getApiError } from '../utils/apiError';
+import { formatDateTime } from '../utils/date';
 import styles from './Files.module.css';
 
 interface SharedFile {
@@ -26,10 +27,6 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso + 'Z').toLocaleString();
 }
 
 function isImage(mime: string) { return mime.startsWith('image/'); }
@@ -261,7 +258,7 @@ export default function FilesPage() {
                         <div className={styles.threadSub}>
                           <span className={styles.threadAuthor}>{f.username}</span>
                           <span className={styles.dot}>·</span>
-                          <span className={styles.threadDate}>{formatDate(f.created_at)}</span>
+                          <span className={styles.threadDate}>{formatDateTime(f.created_at)}</span>
                           <span className={styles.dot}>·</span>
                           <span className={styles.fileSize}>{formatBytes(f.size)}</span>
                         </div>

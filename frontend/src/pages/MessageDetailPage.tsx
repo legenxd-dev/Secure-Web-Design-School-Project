@@ -6,6 +6,7 @@ import Topbar from '../components/Topbar';
 import CommentsSection from '../components/CommentsSection';
 import ErrorMessage from '../components/ErrorMessage';
 import { getApiError } from '../utils/apiError';
+import { formatDateTime } from '../utils/date';
 import styles from './Detail.module.css';
 
 interface Message {
@@ -15,10 +16,6 @@ interface Message {
   title: string;
   content: string;
   created_at: string;
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso + 'Z').toLocaleString();
 }
 
 export default function MessageDetailPage() {
@@ -71,7 +68,7 @@ export default function MessageDetailPage() {
                 <div className={styles.metaAvatar}>{message.username[0]?.toUpperCase()}</div>
                 <div className={styles.metaInfo}>
                   <span className={styles.metaAuthor}>{message.username}</span>
-                  <span className={styles.metaDate}>{formatDate(message.created_at)}</span>
+                  <span className={styles.metaDate}>{formatDateTime(message.created_at)}</span>
                 </div>
                 {user?.id === message.user_id && (
                   <button className={styles.deleteBtn} onClick={handleDelete} title="Delete post">

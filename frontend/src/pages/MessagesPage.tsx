@@ -5,6 +5,7 @@ import { useAuth } from '../context/useAuth';
 import Topbar from '../components/Topbar';
 import ErrorMessage from '../components/ErrorMessage';
 import { getApiError } from '../utils/apiError';
+import { formatDateTime } from '../utils/date';
 import styles from './Messages.module.css';
 
 interface Message {
@@ -14,10 +15,6 @@ interface Message {
   title: string;
   content: string;
   created_at: string;
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso + 'Z').toLocaleString();
 }
 
 function InitialAvatar({ name }: { name: string }) {
@@ -168,7 +165,7 @@ export default function MessagesPage() {
                         <div className={styles.threadSub}>
                           <span className={styles.threadAuthor}>{m.username}</span>
                           <span className={styles.dot}>·</span>
-                          <span className={styles.threadDate}>{formatDate(m.created_at)}</span>
+                          <span className={styles.threadDate}>{formatDateTime(m.created_at)}</span>
                         </div>
                       </div>
                     </div>

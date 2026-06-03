@@ -6,6 +6,7 @@ import Topbar from '../components/Topbar';
 import CommentsSection from '../components/CommentsSection';
 import ErrorMessage from '../components/ErrorMessage';
 import { getApiError } from '../utils/apiError';
+import { formatDateTime } from '../utils/date';
 import styles from './Detail.module.css';
 
 interface SharedFile {
@@ -19,10 +20,6 @@ interface SharedFile {
   size: number;
   scan_status: 'clean' | 'pending' | 'rejected';
   created_at: string;
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso + 'Z').toLocaleString();
 }
 
 function formatBytes(bytes: number): string {
@@ -92,7 +89,7 @@ function FilePreview({ file }: { file: SharedFile }) {
   }
 
   if (isPdf(file.mime_type) && blobUrl) {
-    return <iframe src={blobUrl} className={styles.previewPdf} title={file.original_name} sandbox="allow-same-origin" />;
+    return <iframe src={blobUrl} className={styles.previewPdf} title={file.original_name} />;
   }
 
   if (isVideo(file.mime_type) && blobUrl) {
@@ -210,7 +207,7 @@ export default function FileDetailPage() {
                 <div className={styles.metaAvatar}>{file.username[0]?.toUpperCase()}</div>
                 <div className={styles.metaInfo}>
                   <span className={styles.metaAuthor}>{file.username}</span>
-                  <span className={styles.metaDate}>{formatDate(file.created_at)}</span>
+                  <span className={styles.metaDate}>{formatDateTime(file.created_at)}</span>
                 </div>
                 <div className={styles.metaActions}>
                   <button
