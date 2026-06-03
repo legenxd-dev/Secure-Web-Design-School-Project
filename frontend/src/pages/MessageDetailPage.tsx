@@ -5,6 +5,7 @@ import { useAuth } from '../context/useAuth';
 import Topbar from '../components/Topbar';
 import CommentsSection from '../components/CommentsSection';
 import ErrorMessage from '../components/ErrorMessage';
+import UserAvatar from '../components/UserAvatar';
 import { getApiError } from '../utils/apiError';
 import { formatDateTime } from '../utils/date';
 import styles from './Detail.module.css';
@@ -13,6 +14,7 @@ interface Message {
   id: number;
   user_id: number;
   username: string;
+  avatar: string | null;
   title: string;
   content: string;
   created_at: string;
@@ -65,7 +67,7 @@ export default function MessageDetailPage() {
           <>
             <div className={styles.postCard}>
               <div className={styles.postMeta}>
-                <div className={styles.metaAvatar}>{message.username[0]?.toUpperCase()}</div>
+                <UserAvatar username={message.username} avatar={message.avatar} className={styles.metaAvatar} />
                 <div className={styles.metaInfo}>
                   <span className={styles.metaAuthor}>{message.username}</span>
                   <span className={styles.metaDate}>{formatDateTime(message.created_at)}</span>

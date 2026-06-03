@@ -7,13 +7,14 @@ interface MessageRow {
   id: number;
   user_id: number;
   username: string;
+  avatar: string | null;
   title: string;
   content: string;
   created_at: string;
 }
 
 const SELECT_MESSAGES = `
-  SELECT m.id, m.user_id, u.username, m.title, m.content, m.created_at
+  SELECT m.id, m.user_id, u.username, u.avatar, m.title, m.content, m.created_at
   FROM messages m
   JOIN users u ON u.id = m.user_id
 `;

@@ -5,6 +5,7 @@ import { useAuth } from '../context/useAuth';
 import Topbar from '../components/Topbar';
 import CommentsSection from '../components/CommentsSection';
 import ErrorMessage from '../components/ErrorMessage';
+import UserAvatar from '../components/UserAvatar';
 import { getApiError } from '../utils/apiError';
 import { formatDateTime } from '../utils/date';
 import styles from './Detail.module.css';
@@ -13,6 +14,7 @@ interface SharedFile {
   id: number;
   user_id: number;
   username: string;
+  avatar: string | null;
   title: string;
   description: string;
   original_name: string;
@@ -204,7 +206,7 @@ export default function FileDetailPage() {
           <>
             <div className={styles.postCard}>
               <div className={styles.postMeta}>
-                <div className={styles.metaAvatar}>{file.username[0]?.toUpperCase()}</div>
+                <UserAvatar username={file.username} avatar={file.avatar} className={styles.metaAvatar} />
                 <div className={styles.metaInfo}>
                   <span className={styles.metaAuthor}>{file.username}</span>
                   <span className={styles.metaDate}>{formatDateTime(file.created_at)}</span>

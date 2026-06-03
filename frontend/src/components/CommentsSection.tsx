@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import apiClient from '../api/client';
 import { useAuth } from '../context/useAuth';
 import ErrorMessage from './ErrorMessage';
+import UserAvatar from './UserAvatar';
 import { getApiError } from '../utils/apiError';
 import { formatDateTime } from '../utils/date';
 import styles from './CommentsSection.module.css';
@@ -10,6 +11,7 @@ interface Comment {
   id: number;
   user_id: number;
   username: string;
+  avatar: string | null;
   content: string;
   created_at: string;
 }
@@ -78,9 +80,11 @@ export default function CommentsSection({ postType, postId }: Props) {
       </h3>
 
       <form onSubmit={handleSubmit} className={styles.form}>
-        <div className={styles.formAvatar}>
-          {user?.username[0]?.toUpperCase()}
-        </div>
+        <UserAvatar
+          username={user?.username ?? '?'}
+          avatar={user?.avatar}
+          className={styles.formAvatar}
+        />
         <div className={styles.formRight}>
           <textarea
             className={styles.textarea}
@@ -110,9 +114,7 @@ export default function CommentsSection({ postType, postId }: Props) {
         <div className={styles.list}>
           {comments.map((c) => (
             <div key={c.id} className={styles.comment}>
-              <div className={styles.commentAvatar}>
-                {c.username[0]?.toUpperCase()}
-              </div>
+              <UserAvatar username={c.username} avatar={c.avatar} className={styles.commentAvatar} />
               <div className={styles.commentBody}>
                 <div className={styles.commentHeader}>
                   <span className={styles.commentAuthor}>{c.username}</span>

@@ -28,6 +28,7 @@ interface FileRow {
   id: number;
   user_id: number;
   username: string;
+  avatar: string | null;
   title: string;
   description: string;
   filename: string;
@@ -40,7 +41,7 @@ interface FileRow {
 }
 
 const SELECT_FILES = `
-  SELECT f.id, f.user_id, u.username, f.title, f.description,
+  SELECT f.id, f.user_id, u.username, u.avatar, f.title, f.description,
          f.original_name, f.mime_type, f.size,
          f.scan_status, f.created_at
   FROM files f

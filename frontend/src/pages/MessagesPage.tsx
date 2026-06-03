@@ -4,6 +4,7 @@ import apiClient from '../api/client';
 import { useAuth } from '../context/useAuth';
 import Topbar from '../components/Topbar';
 import ErrorMessage from '../components/ErrorMessage';
+import UserAvatar from '../components/UserAvatar';
 import { getApiError } from '../utils/apiError';
 import { formatDateTime } from '../utils/date';
 import styles from './Messages.module.css';
@@ -12,15 +13,10 @@ interface Message {
   id: number;
   user_id: number;
   username: string;
+  avatar: string | null;
   title: string;
   content: string;
   created_at: string;
-}
-
-function InitialAvatar({ name }: { name: string }) {
-  return (
-    <div className={styles.avatar}>{name[0]?.toUpperCase()}</div>
-  );
 }
 
 export default function MessagesPage() {
@@ -159,7 +155,7 @@ export default function MessagesPage() {
                 >
                   <div className={styles.threadHeader}>
                     <div className={styles.threadLeft}>
-                      <InitialAvatar name={m.username} />
+                      <UserAvatar username={m.username} avatar={m.avatar} className={styles.avatar} />
                       <div className={styles.threadMeta}>
                         <span className={styles.threadTitle}>{m.title}</span>
                         <div className={styles.threadSub}>

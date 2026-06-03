@@ -9,6 +9,7 @@ interface CommentRow {
   post_id: number;
   user_id: number;
   username: string;
+  avatar: string | null;
   content: string;
   created_at: string;
 }
@@ -20,7 +21,7 @@ function resolveParentTable(postType: unknown): 'messages' | 'files' | null {
 }
 
 const SELECT_COMMENT = `
-  SELECT c.id, c.post_type, c.post_id, c.user_id, u.username, c.content, c.created_at
+  SELECT c.id, c.post_type, c.post_id, c.user_id, u.username, u.avatar, c.content, c.created_at
   FROM comments c
   JOIN users u ON u.id = c.user_id
 `;
