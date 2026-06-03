@@ -1,10 +1,8 @@
 import { Request, Response } from 'express';
-import fs from 'fs';
-import path from 'path';
-import { randomUUID } from 'crypto';
 import bcrypt from 'bcryptjs';
 import pool from '../db/database';
 import { validateImageMagicBytes } from '../utils/fileValidation';
+import { deleteCloudinaryAsset, requireCloudinary, uploadBufferToCloudinary } from '../utils/cloudinary';
 
 interface UserRow {
   id: number;
@@ -12,6 +10,7 @@ interface UserRow {
   email: string;
   role: 'user' | 'admin' | null;
   avatar: string | null;
+  avatar_public_id?: string | null;
 }
 
 function publicUser(user: UserRow) {
@@ -26,7 +25,7 @@ function publicUser(user: UserRow) {
 
 export async function getMe(req: Request, res: Response): Promise<void> {
   const result = await pool.query<UserRow>(
-    'SELECT id, username, email, role, avatar FROM users WHERE id = $1',
+    'SELECT id, username, email, role, avatar, avatar_public_id FROM users WHERE id = $1',
     [req.user!.sub],
   );
   const user = result.rows[0];
@@ -62,7 +61,7 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
   }
 
   const updated = await pool.query<UserRow>(
-    'SELECT id, username, email, role, avatar FROM users WHERE id = $1',
+    'SELECT id, username, email, role, avatar, avatar_public_id FROM users WHERE id = $1',
     [req.user!.sub],
   );
   res.json(publicUser(updated.rows[0]));
@@ -116,39 +115,42 @@ export async function uploadAvatar(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const tempPath = req.file.path;
-
-  if (!validateImageMagicBytes(tempPath)) {
-    fs.unlink(tempPath, () => undefined);
+  if (!validateImageMagicBytes(req.file.buffer)) {
     res.status(422).json({ error: 'File content does not match an allowed image format' });
     return;
   }
 
-  const ext = path.extname(req.file.originalname).toLowerCase() || '.jpg';
-  const safeFilename = `${randomUUID()}${ext}`;
-  const finalPath = path.join(process.cwd(), 'uploads', 'avatars', safeFilename);
-
   try {
-    fs.renameSync(tempPath, finalPath);
+    requireCloudinary();
   } catch {
-    fs.unlink(tempPath, () => undefined);
-    res.status(500).json({ error: 'Failed to save file' });
+    res.status(503).json({ error: 'Cloudinary is not configured. Avatar uploads are disabled.' });
     return;
   }
 
-  const currentResult = await pool.query<{ avatar: string | null }>(
-    'SELECT avatar FROM users WHERE id = $1',
-    [req.user!.sub],
-  );
-  const currentAvatar = currentResult.rows[0]?.avatar;
-  if (currentAvatar) {
-    fs.unlink(path.join(process.cwd(), 'uploads', 'avatars', currentAvatar), () => undefined);
+  try {
+    const uploaded = await uploadBufferToCloudinary(req.file.buffer, {
+      folder: 'secdev/avatars',
+      resourceType: 'image',
+    });
+
+    const currentResult = await pool.query<{ avatar_public_id: string | null }>(
+      'SELECT avatar_public_id FROM users WHERE id = $1',
+      [req.user!.sub],
+    );
+    await deleteCloudinaryAsset(currentResult.rows[0]?.avatar_public_id, 'image');
+
+    await pool.query(
+      'UPDATE users SET avatar = $1, avatar_public_id = $2 WHERE id = $3',
+      [uploaded.url, uploaded.publicId, req.user!.sub],
+    );
+  } catch (err) {
+    console.error('[users] Cloudinary avatar upload failed:', err instanceof Error ? err.message : err);
+    res.status(502).json({ error: 'Avatar storage failed. Please try again.' });
+    return;
   }
 
-  await pool.query('UPDATE users SET avatar = $1 WHERE id = $2', [safeFilename, req.user!.sub]);
-
   const updated = await pool.query<UserRow>(
-    'SELECT id, username, email, role, avatar FROM users WHERE id = $1',
+    'SELECT id, username, email, role, avatar, avatar_public_id FROM users WHERE id = $1',
     [req.user!.sub],
   );
   res.json(publicUser(updated.rows[0]));

@@ -154,7 +154,9 @@ export default function ProfilePage() {
   const avatarSrc = preview
     ? preview
     : profile?.avatar
-      ? `${AVATAR_BASE}${profile.avatar}`
+      ? profile.avatar.startsWith('http://') || profile.avatar.startsWith('https://')
+        ? profile.avatar
+        : `${AVATAR_BASE}${profile.avatar}`
       : null;
 
   return (

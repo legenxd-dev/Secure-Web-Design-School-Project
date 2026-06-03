@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
-import { randomUUID } from 'crypto';
 import pool from '../db/database';
 import {
   sha256,
@@ -14,6 +13,13 @@ import {
 import { validateImageMagicBytes, validatePdfMagicBytes } from '../utils/fileValidation';
 import { canModerate } from '../middleware/auth.middleware';
 import { cleanText } from '../utils/text';
+import {
+  CloudinaryResourceType,
+  deleteCloudinaryAsset,
+  requireCloudinary,
+  resourceTypeForMime,
+  uploadBufferToCloudinary,
+} from '../utils/cloudinary';
 
 const FILES_DIR = path.join(process.cwd(), 'uploads', 'files');
 
@@ -37,13 +43,17 @@ interface FileRow {
   size: number;
   scan_status: 'clean' | 'pending' | 'rejected';
   vt_analysis_id: string | null;
+  storage_url: string | null;
+  storage_public_id: string | null;
+  storage_resource_type: CloudinaryResourceType | null;
   created_at: string;
 }
 
 const SELECT_FILES = `
   SELECT f.id, f.user_id, u.username, u.avatar, f.title, f.description,
          f.original_name, f.mime_type, f.size,
-         f.scan_status, f.created_at
+         f.scan_status, f.storage_url, f.storage_public_id, f.storage_resource_type,
+         f.created_at
   FROM files f
   JOIN users u ON u.id = f.user_id
 `;
@@ -54,6 +64,44 @@ function isMalicious(stats: { malicious: number; suspicious: number }): boolean 
 
 function removeStoredFile(filename: string): void {
   fs.unlink(path.join(FILES_DIR, filename), () => undefined);
+}
+
+async function uploadSharedFile(buffer: Buffer, mimeType: string) {
+  return uploadBufferToCloudinary(buffer, {
+    folder: 'secdev/files',
+    resourceType: resourceTypeForMime(mimeType),
+  });
+}
+
+async function sendStoredFile(
+  res: Response,
+  file: Pick<FileRow, 'filename' | 'original_name' | 'mime_type' | 'storage_url'>,
+  disposition: 'inline' | 'attachment',
+): Promise<void> {
+  const safeName = encodeURIComponent(file.original_name);
+  res.setHeader('Content-Disposition', `${disposition}; filename*=UTF-8''${safeName}`);
+  res.setHeader('Content-Type', SAFE_INLINE_MIME.has(file.mime_type) ? file.mime_type : 'application/octet-stream');
+
+  if (file.storage_url) {
+    const response = await fetch(file.storage_url);
+    if (!response.ok) {
+      res.status(502).json({ error: 'Failed to fetch stored file' });
+      return;
+    }
+    const buffer = Buffer.from(await response.arrayBuffer());
+    res.send(buffer);
+    return;
+  }
+
+  const filePath = path.join(FILES_DIR, file.filename);
+  if (!fs.existsSync(filePath)) {
+    res.status(404).json({ error: 'File not found on disk' });
+    return;
+  }
+
+  res.sendFile(filePath, (err) => {
+    if (err && !res.headersSent) res.status(500).json({ error: 'Failed to serve file' });
+  });
 }
 
 export async function getFiles(_req: Request, res: Response): Promise<void> {
@@ -120,8 +168,14 @@ export async function uploadFile(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const safeFilename = `${randomUUID()}${ext}`;
-  const filePath = path.join(FILES_DIR, safeFilename);
+  try {
+    requireCloudinary();
+  } catch {
+    res.status(503).json({ error: 'Cloudinary is not configured. File sharing is disabled.' });
+    return;
+  }
+
+  const safeFilename = path.basename(originalname).replace(/[^\w.\- ]/g, '_') || `upload${ext}`;
 
   try {
     const hash = sha256(buffer);
@@ -138,16 +192,26 @@ export async function uploadFile(req: Request, res: Response): Promise<void> {
         return;
       }
 
-      try {
-        fs.writeFileSync(filePath, buffer);
-      } catch {
-        res.status(500).json({ error: 'Failed to save file' });
-        return;
-      }
+      const stored = await uploadSharedFile(buffer, mimetype);
 
       const insertResult = await pool.query<{ id: number }>(
-        'INSERT INTO files (user_id, title, description, filename, original_name, mime_type, size, scan_status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id',
-        [req.user!.sub, safeTitle, safeDescription, safeFilename, originalname, mimetype, size, 'clean'],
+        `INSERT INTO files
+          (user_id, title, description, filename, original_name, mime_type, size, scan_status, storage_url, storage_public_id, storage_resource_type)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+         RETURNING id`,
+        [
+          req.user!.sub,
+          safeTitle,
+          safeDescription,
+          safeFilename,
+          originalname,
+          mimetype,
+          size,
+          'clean',
+          stored.url,
+          stored.publicId,
+          stored.resourceType,
+        ],
       );
       const file = (await pool.query<FileRow>(`${SELECT_FILES} WHERE f.id = $1`, [insertResult.rows[0].id])).rows[0];
       res.status(201).json(file);
@@ -170,31 +234,49 @@ export async function uploadFile(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    try {
-      fs.writeFileSync(filePath, buffer);
-    } catch {
-      res.status(500).json({ error: 'Failed to save file' });
-      return;
-    }
+    const stored = await uploadSharedFile(buffer, mimetype);
 
     const insertResult = await pool.query<{ id: number }>(
-      'INSERT INTO files (user_id, title, description, filename, original_name, mime_type, size, scan_status, vt_analysis_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id',
-      [req.user!.sub, safeTitle, safeDescription, safeFilename, originalname, mimetype, size, 'pending', analysisId],
+      `INSERT INTO files
+        (user_id, title, description, filename, original_name, mime_type, size, scan_status, vt_analysis_id, storage_url, storage_public_id, storage_resource_type)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+       RETURNING id`,
+      [
+        req.user!.sub,
+        safeTitle,
+        safeDescription,
+        safeFilename,
+        originalname,
+        mimetype,
+        size,
+        'pending',
+        analysisId,
+        stored.url,
+        stored.publicId,
+        stored.resourceType,
+      ],
     );
     const file = (await pool.query<FileRow>(`${SELECT_FILES} WHERE f.id = $1`, [insertResult.rows[0].id])).rows[0];
     res.status(201).json(file);
   } catch (err) {
-    console.error('[files] VT error during upload:', err instanceof Error ? err.message : err);
-    removeStoredFile(safeFilename);
-    res.status(502).json({ error: 'VirusTotal scan failed. File was not accepted.' });
+    console.error('[files] upload error:', err instanceof Error ? err.message : err);
+    res.status(502).json({ error: 'File scan or storage failed. File was not accepted.' });
   }
 }
 
 export async function checkFileScanStatus(req: Request, res: Response): Promise<void> {
   const id = parseInt(String(req.params.id), 10);
 
-  const result = await pool.query<{ id: number; user_id: number; filename: string; scan_status: string; vt_analysis_id: string | null }>(
-    'SELECT id, user_id, filename, scan_status, vt_analysis_id FROM files WHERE id = $1',
+  const result = await pool.query<{
+    id: number;
+    user_id: number;
+    filename: string;
+    scan_status: string;
+    vt_analysis_id: string | null;
+    storage_public_id: string | null;
+    storage_resource_type: CloudinaryResourceType | null;
+  }>(
+    'SELECT id, user_id, filename, scan_status, vt_analysis_id, storage_public_id, storage_resource_type FROM files WHERE id = $1',
     [id],
   );
   const file = result.rows[0];
@@ -237,8 +319,15 @@ export async function checkFileScanStatus(req: Request, res: Response): Promise<
 
     if (isMalicious(stats)) {
       fs.unlink(path.join(FILES_DIR, file.filename), () => undefined);
+      await deleteCloudinaryAsset(file.storage_public_id, file.storage_resource_type);
       await pool.query(
-        `UPDATE files SET scan_status = 'rejected', vt_analysis_id = NULL WHERE id = $1`,
+        `UPDATE files
+         SET scan_status = 'rejected',
+             vt_analysis_id = NULL,
+             storage_url = NULL,
+             storage_public_id = NULL,
+             storage_resource_type = NULL
+         WHERE id = $1`,
         [id],
       );
       res.json({
@@ -261,8 +350,8 @@ export async function checkFileScanStatus(req: Request, res: Response): Promise<
 
 export async function viewFile(req: Request, res: Response): Promise<void> {
   const id = parseInt(String(req.params.id), 10);
-  const result = await pool.query<Pick<FileRow, 'filename' | 'original_name' | 'mime_type' | 'scan_status'>>(
-    'SELECT filename, original_name, mime_type, scan_status FROM files WHERE id = $1',
+  const result = await pool.query<Pick<FileRow, 'filename' | 'original_name' | 'mime_type' | 'scan_status' | 'storage_url'>>(
+    'SELECT filename, original_name, mime_type, scan_status, storage_url FROM files WHERE id = $1',
     [id],
   );
   const file = result.rows[0];
@@ -271,21 +360,13 @@ export async function viewFile(req: Request, res: Response): Promise<void> {
   if (file.scan_status === 'pending') { res.status(202).json({ error: 'File is still being scanned. Please wait.' }); return; }
   if (file.scan_status === 'rejected') { res.status(410).json({ error: 'This file was removed after being flagged by VirusTotal.' }); return; }
 
-  const filePath = path.join(FILES_DIR, file.filename);
-  if (!fs.existsSync(filePath)) { res.status(404).json({ error: 'File not found on disk' }); return; }
-
-  const safeName = encodeURIComponent(file.original_name);
-  res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${safeName}`);
-  res.setHeader('Content-Type', SAFE_INLINE_MIME.has(file.mime_type) ? file.mime_type : 'text/plain; charset=utf-8');
-  res.sendFile(filePath, (err) => {
-    if (err && !res.headersSent) res.status(500).json({ error: 'Failed to serve file' });
-  });
+  await sendStoredFile(res, file, 'inline');
 }
 
 export async function downloadFile(req: Request, res: Response): Promise<void> {
   const id = parseInt(String(req.params.id), 10);
-  const result = await pool.query<Pick<FileRow, 'filename' | 'original_name' | 'mime_type' | 'scan_status'>>(
-    'SELECT filename, original_name, mime_type, scan_status FROM files WHERE id = $1',
+  const result = await pool.query<Pick<FileRow, 'filename' | 'original_name' | 'mime_type' | 'scan_status' | 'storage_url'>>(
+    'SELECT filename, original_name, mime_type, scan_status, storage_url FROM files WHERE id = $1',
     [id],
   );
   const file = result.rows[0];
@@ -294,19 +375,19 @@ export async function downloadFile(req: Request, res: Response): Promise<void> {
   if (file.scan_status === 'pending') { res.status(202).json({ error: 'File is still being scanned. Please wait.' }); return; }
   if (file.scan_status === 'rejected') { res.status(410).json({ error: 'This file was removed after being flagged by VirusTotal.' }); return; }
 
-  const filePath = path.join(FILES_DIR, file.filename);
-  if (!fs.existsSync(filePath)) { res.status(404).json({ error: 'File not found on disk' }); return; }
-
-  res.download(filePath, file.original_name, (err) => {
-    if (err && !res.headersSent) res.status(500).json({ error: 'Download failed' });
-  });
+  await sendStoredFile(res, file, 'attachment');
 }
 
 export async function deleteFile(req: Request, res: Response): Promise<void> {
   const id = parseInt(String(req.params.id), 10);
 
-  const result = await pool.query<{ user_id: number; filename: string }>(
-    'SELECT user_id, filename FROM files WHERE id = $1',
+  const result = await pool.query<{
+    user_id: number;
+    filename: string;
+    storage_public_id: string | null;
+    storage_resource_type: CloudinaryResourceType | null;
+  }>(
+    'SELECT user_id, filename, storage_public_id, storage_resource_type FROM files WHERE id = $1',
     [id],
   );
   const file = result.rows[0];
@@ -318,6 +399,7 @@ export async function deleteFile(req: Request, res: Response): Promise<void> {
   }
 
   fs.unlink(path.join(FILES_DIR, file.filename), () => undefined);
+  await deleteCloudinaryAsset(file.storage_public_id, file.storage_resource_type);
   await pool.query('DELETE FROM files WHERE id = $1', [id]);
   res.status(204).send();
 }

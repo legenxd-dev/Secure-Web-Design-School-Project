@@ -9,8 +9,6 @@ const BLOCKED_EXTENSIONS = new Set([
   '.svg', '.sh', '.bat', '.py', '.rb', '.pl', '.cgi',
 ]);
 
-const UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'avatars');
-
 // Rejection reason is stored on req so the controller can return a clear message
 // without relying on multer error propagation (which conflicts with Node domains)
 declare global {
@@ -40,7 +38,7 @@ function fileFilter(req: Request, file: Express.Multer.File, cb: FileFilterCallb
 }
 
 export const uploadMiddleware = multer({
-  dest: UPLOAD_DIR,
+  storage: multer.memoryStorage(),
   limits: {
     fileSize: 2 * 1024 * 1024,
     files: 1,

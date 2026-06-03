@@ -5,6 +5,13 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? (
 );
 const AVATAR_BASE = `${apiBaseUrl}/uploads/avatars/`;
 
+function avatarUrl(avatar: string): string {
+  if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
+    return avatar;
+  }
+  return `${AVATAR_BASE}${encodeURIComponent(avatar)}`;
+}
+
 interface Props {
   username: string;
   avatar?: string | null;
@@ -16,7 +23,7 @@ export default function UserAvatar({ username, avatar, className }: Props) {
     <div className={className}>
       {avatar ? (
         <img
-          src={`${AVATAR_BASE}${encodeURIComponent(avatar)}`}
+          src={avatarUrl(avatar)}
           alt={`${username} avatar`}
           className={styles.image}
         />

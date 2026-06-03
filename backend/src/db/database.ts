@@ -17,6 +17,7 @@ export async function initDb(): Promise<void> {
       password_version INTEGER NOT NULL DEFAULT 0,
       role             TEXT    NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
       avatar           TEXT    DEFAULT NULL,
+      avatar_public_id TEXT    DEFAULT NULL,
       created_at       TIMESTAMPTZ DEFAULT NOW()
     )
   `);
@@ -29,6 +30,11 @@ export async function initDb(): Promise<void> {
   await pool.query(`
     ALTER TABLE users
     ADD COLUMN IF NOT EXISTS avatar TEXT DEFAULT NULL
+  `);
+
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS avatar_public_id TEXT DEFAULT NULL
   `);
 
   await pool.query(`
@@ -69,8 +75,26 @@ export async function initDb(): Promise<void> {
       scan_status    TEXT    NOT NULL DEFAULT 'clean'
                               CHECK(scan_status IN ('clean', 'pending', 'rejected')),
       vt_analysis_id TEXT    DEFAULT NULL,
+      storage_url    TEXT    DEFAULT NULL,
+      storage_public_id TEXT DEFAULT NULL,
+      storage_resource_type TEXT DEFAULT NULL,
       created_at     TIMESTAMPTZ DEFAULT NOW()
     )
+  `);
+
+  await pool.query(`
+    ALTER TABLE files
+    ADD COLUMN IF NOT EXISTS storage_url TEXT DEFAULT NULL
+  `);
+
+  await pool.query(`
+    ALTER TABLE files
+    ADD COLUMN IF NOT EXISTS storage_public_id TEXT DEFAULT NULL
+  `);
+
+  await pool.query(`
+    ALTER TABLE files
+    ADD COLUMN IF NOT EXISTS storage_resource_type TEXT DEFAULT NULL
   `);
 
   await pool.query(`

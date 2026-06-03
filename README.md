@@ -12,7 +12,7 @@ The project is intentionally security-focused: the code demonstrates authenticat
 | Backend | Node.js, Express, TypeScript |
 | Database | PostgreSQL via `pg` |
 | Auth | JWT in httpOnly cookies |
-| Upload | multer, magic-byte validation, VirusTotal |
+| Upload | multer, magic-byte validation, VirusTotal, Cloudinary |
 | Security | helmet, cors, express-rate-limit, origin guard |
 
 ## Required Pages
@@ -43,6 +43,9 @@ NODE_ENV=development
 DATABASE_URL=postgresql://username:password@hostname/dbname
 VIRUSTOTAL_API_KEY=your_virustotal_api_key_here
 FRONTEND_ORIGIN=http://localhost:5173
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 ```
 
 The API runs on `http://localhost:4000`.
@@ -87,9 +90,10 @@ The frontend runs on `http://localhost:5173`.
 - Helmet adds defensive HTTP headers.
 - CORS is restricted to the configured frontend origin.
 - Rate limiting is applied to auth, upload, and general API routes.
-- Avatar uploads enforce extension, MIME, size, and magic-byte checks.
+- Avatar uploads enforce extension, MIME, size, and magic-byte checks, then store accepted images in Cloudinary.
 - Shared file uploads fail closed when VirusTotal is unavailable or not configured.
 - Shared files cannot be previewed or downloaded while scan status is pending or rejected.
+- Shared file bytes are stored in Cloudinary; PostgreSQL stores metadata and Cloudinary public IDs.
 - Real secrets, database files, uploads, build output, and dependencies are ignored by Git.
 
 ## Validation Commands
