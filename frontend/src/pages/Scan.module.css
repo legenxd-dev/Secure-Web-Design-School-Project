@@ -1,0 +1,501 @@
+.page {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.topbarInner {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--accent);
+}
+
+.brandName {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: 0.04em;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.navItem {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: 'Lexend', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 400;
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.navItem:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.navItemActive {
+  composes: navItem;
+  color: var(--text);
+  background: var(--surface-2);
+  font-weight: 500;
+}
+
+.topbarRight {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.logoutBtn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: 'Lexend', sans-serif;
+  font-size: 0.8rem;
+  border-radius: var(--radius-sm);
+  padding: 0.3rem 0.7rem;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.logoutBtn:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+/* Content */
+
+.content {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Upload card */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.75rem;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.35rem;
+  color: var(--accent);
+}
+
+.cardHeader h1 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  font-size: 0.83rem;
+  color: var(--text-muted);
+  margin: 0 0 1.5rem;
+  font-weight: 400;
+}
+
+/* Dropzone */
+
+.dropzone {
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: 2.5rem 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  background: var(--surface-2);
+}
+
+.dropzone:hover {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.dropzoneDragging {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.dropzoneHasFile {
+  border-style: solid;
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.dropzonePrompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dropzonePrompt p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.browseLink {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.limitNote {
+  font-size: 0.78rem !important;
+  color: var(--text-dim) !important;
+}
+
+.fileInfo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.fileName {
+  font-weight: 500;
+  color: var(--text);
+  margin: 0;
+  font-size: 0.9rem;
+  font-family: 'JetBrains Mono', monospace;
+  word-break: break-all;
+  text-align: left;
+}
+
+.fileSize {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0.2rem 0 0;
+}
+
+.error {
+  color: var(--red);
+  font-size: 0.82rem;
+  margin: 0.75rem 0 0;
+}
+
+.scanBtn {
+  margin-top: 1.25rem;
+  width: 100%;
+  padding: 0.7rem 1rem;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 600;
+  font-family: 'Lexend', sans-serif;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  letter-spacing: 0.01em;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.scanBtn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.scanBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.spinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Results card */
+
+.resultsCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.verdict {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 1.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.verdict_clean {
+  background: var(--green-dim);
+  border-left: 3px solid var(--green);
+  color: var(--green);
+}
+
+.verdict_malicious {
+  background: var(--red-dim);
+  border-left: 3px solid var(--red);
+  color: var(--red);
+}
+
+.verdict_suspicious {
+  background: var(--yellow-dim);
+  border-left: 3px solid var(--yellow);
+  color: var(--yellow);
+}
+
+.verdictLabel {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.verdictFile {
+  font-size: 0.75rem;
+  margin: 0.2rem 0 0;
+  opacity: 0.7;
+  word-break: break-all;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Stats */
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-bottom: 1px solid var(--border);
+}
+
+.stat {
+  padding: 1.25rem 1rem;
+  text-align: center;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.stat:last-child {
+  border-right: none;
+}
+
+.statNum {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.statLabel {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.statMalicious .statNum { color: var(--red); }
+.statSuspicious .statNum { color: var(--yellow); }
+.statHarmless .statNum { color: var(--green); }
+.statUndetected .statNum { color: var(--text-dim); }
+
+/* Engine results */
+
+.enginesSection {
+  padding: 1.5rem 1.75rem;
+}
+
+.enginesSection h2 {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 0 0 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.enginesTable {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.enginesHeader {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.55rem 1rem;
+  background: var(--surface-2);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  position: sticky;
+  top: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.engineRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-top: 1px solid var(--border-soft);
+  font-size: 0.82rem;
+  transition: background 0.1s;
+}
+
+.engineRow:hover {
+  background: var(--surface-2);
+}
+
+.engineName {
+  color: var(--text);
+}
+
+.engineBadge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.badge_malicious {
+  background: var(--red-dim);
+  color: var(--red);
+}
+
+.badge_suspicious {
+  background: var(--yellow-dim);
+  color: var(--yellow);
+}
+
+.badge_harmless {
+  background: var(--green-dim);
+  color: var(--green);
+}
+
+.badge_undetected {
+  background: var(--surface-2);
+  color: var(--text-dim);
+}
+
+.badge_type-unsupported {
+  background: var(--surface-2);
+  color: var(--text-dim);
+}
+
+/* Pending card */
+
+.pendingCard {
+  background: var(--surface);
+  border: 1px solid var(--yellow);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.75rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: var(--yellow);
+}
+
+.pendingBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.pendingCard p {
+  margin: 0 0 0.75rem;
+  font-size: 0.88rem;
+}
+
+.checkBtn {
+  align-self: flex-start;
+  background: var(--yellow);
+  color: #000;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: 'Lexend', sans-serif;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: opacity 0.15s;
+}
+
+.checkBtn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.checkBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spinnerDark {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(0, 0, 0, 0.3);
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}

@@ -1,0 +1,311 @@
+import { Request, Response } from 'express';
+import fs from 'fs';
+import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
+import pool from '../db/database';
+import {
+  sha256,
+  vtGet,
+  vtPost,
+  VTFileResponse,
+  VTAnalysisResponse,
+  VTUploadResponse,
+} from '../utils/virustotal';
+import { validateImageMagicBytes, validatePdfMagicBytes } from '../utils/fileValidation';
+
+const FILES_DIR = path.join(process.cwd(), 'uploads', 'files');
+
+const SAFE_INLINE_MIME = new Set([
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif',
+  'application/pdf',
+  'video/mp4', 'video/webm', 'video/ogg',
+  'audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/webm',
+]);
+
+interface FileRow {
+  id: number;
+  user_id: number;
+  username: string;
+  title: string;
+  description: string;
+  filename: string;
+  original_name: string;
+  mime_type: string;
+  size: number;
+  scan_status: 'clean' | 'pending' | 'rejected';
+  vt_analysis_id: string | null;
+  created_at: string;
+}
+
+const SELECT_FILES = `
+  SELECT f.id, f.user_id, u.username, f.title, f.description,
+         f.original_name, f.mime_type, f.size,
+         f.scan_status, f.created_at
+  FROM files f
+  JOIN users u ON u.id = f.user_id
+`;
+
+function isMalicious(stats: { malicious: number; suspicious: number }): boolean {
+  return stats.malicious > 0 || stats.suspicious > 0;
+}
+
+export async function getFiles(_req: Request, res: Response): Promise<void> {
+  const result = await pool.query<FileRow>(
+    `${SELECT_FILES} ORDER BY f.created_at DESC LIMIT 200`,
+  );
+  res.json(result.rows);
+}
+
+export async function getFileById(req: Request, res: Response): Promise<void> {
+  const id = parseInt(req.params.id, 10);
+  const result = await pool.query<FileRow>(`${SELECT_FILES} WHERE f.id = $1`, [id]);
+  const file = result.rows[0];
+  if (!file) {
+    res.status(404).json({ error: 'File not found' });
+    return;
+  }
+  res.json(file);
+}
+
+export async function uploadFile(req: Request, res: Response): Promise<void> {
+  if (!req.file) {
+    res.status(400).json({ error: 'No file uploaded' });
+    return;
+  }
+
+  const { title, description } = req.body as { title?: string; description?: string };
+
+  if (!title || title.trim().length === 0) {
+    res.status(400).json({ error: 'Title is required' });
+    return;
+  }
+  if (title.length > 200) {
+    res.status(400).json({ error: 'Title must be 200 characters or fewer' });
+    return;
+  }
+  if ((description ?? '').length > 1000) {
+    res.status(400).json({ error: 'Description must be 1000 characters or fewer' });
+    return;
+  }
+
+  const { buffer, originalname, mimetype, size } = req.file;
+
+  if (mimetype.startsWith('image/')) {
+    if (!validateImageMagicBytes(buffer)) {
+      res.status(422).json({ error: 'File content does not match the declared image type' });
+      return;
+    }
+  } else if (mimetype === 'application/pdf') {
+    if (!validatePdfMagicBytes(buffer)) {
+      res.status(422).json({ error: 'File content does not match the declared PDF type' });
+      return;
+    }
+  }
+
+  const ext = path.extname(originalname);
+  const safeFilename = `${uuidv4()}${ext}`;
+  const filePath = path.join(FILES_DIR, safeFilename);
+
+  try {
+    fs.writeFileSync(filePath, buffer);
+  } catch {
+    res.status(500).json({ error: 'Failed to save file' });
+    return;
+  }
+
+  const apiKey = process.env.VIRUSTOTAL_API_KEY;
+
+  if (!apiKey) {
+    const insertResult = await pool.query<{ id: number }>(
+      'INSERT INTO files (user_id, title, description, filename, original_name, mime_type, size, scan_status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id',
+      [req.user!.sub, title.trim(), (description ?? '').trim(), safeFilename, originalname, mimetype, size, 'clean'],
+    );
+    const file = (await pool.query<FileRow>(`${SELECT_FILES} WHERE f.id = $1`, [insertResult.rows[0].id])).rows[0];
+    res.status(201).json(file);
+    return;
+  }
+
+  try {
+    const hash = sha256(buffer);
+    const hashReport = await vtGet(`/files/${hash}`, apiKey);
+
+    if (hashReport.status === 200) {
+      const data = hashReport.data as VTFileResponse;
+      const stats = data.data.attributes.last_analysis_stats;
+
+      if (isMalicious(stats)) {
+        fs.unlink(filePath, () => undefined);
+        res.status(422).json({
+          error: `File rejected by VirusTotal: ${stats.malicious} malicious, ${stats.suspicious} suspicious detections.`,
+        });
+        return;
+      }
+
+      const insertResult = await pool.query<{ id: number }>(
+        'INSERT INTO files (user_id, title, description, filename, original_name, mime_type, size, scan_status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id',
+        [req.user!.sub, title.trim(), (description ?? '').trim(), safeFilename, originalname, mimetype, size, 'clean'],
+      );
+      const file = (await pool.query<FileRow>(`${SELECT_FILES} WHERE f.id = $1`, [insertResult.rows[0].id])).rows[0];
+      res.status(201).json(file);
+      return;
+    }
+
+    const uploadRes = await vtPost('/files', apiKey, buffer, originalname, mimetype || 'application/octet-stream');
+    let analysisId: string | null = null;
+
+    if (uploadRes.status === 200) {
+      analysisId = (uploadRes.data as VTUploadResponse).data.id;
+    } else {
+      console.warn('[files] VT upload failed with status', uploadRes.status);
+    }
+
+    const scanStatus = analysisId ? 'pending' : 'pending';
+
+    const insertResult = await pool.query<{ id: number }>(
+      'INSERT INTO files (user_id, title, description, filename, original_name, mime_type, size, scan_status, vt_analysis_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id',
+      [req.user!.sub, title.trim(), (description ?? '').trim(), safeFilename, originalname, mimetype, size, scanStatus, analysisId],
+    );
+    const file = (await pool.query<FileRow>(`${SELECT_FILES} WHERE f.id = $1`, [insertResult.rows[0].id])).rows[0];
+    res.status(201).json(file);
+  } catch (err) {
+    console.error('[files] VT error during upload:', err instanceof Error ? err.message : err);
+    const insertResult = await pool.query<{ id: number }>(
+      'INSERT INTO files (user_id, title, description, filename, original_name, mime_type, size, scan_status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id',
+      [req.user!.sub, title.trim(), (description ?? '').trim(), safeFilename, originalname, mimetype, size, 'pending'],
+    );
+    const file = (await pool.query<FileRow>(`${SELECT_FILES} WHERE f.id = $1`, [insertResult.rows[0].id])).rows[0];
+    res.status(201).json(file);
+  }
+}
+
+export async function checkFileScanStatus(req: Request, res: Response): Promise<void> {
+  const id = parseInt(req.params.id, 10);
+
+  const result = await pool.query<{ id: number; user_id: number; filename: string; scan_status: string; vt_analysis_id: string | null }>(
+    'SELECT id, user_id, filename, scan_status, vt_analysis_id FROM files WHERE id = $1',
+    [id],
+  );
+  const file = result.rows[0];
+
+  if (!file) {
+    res.status(404).json({ error: 'File not found' });
+    return;
+  }
+
+  if (file.user_id !== req.user!.sub) {
+    res.status(403).json({ error: 'Forbidden' });
+    return;
+  }
+
+  if (file.scan_status !== 'pending' || !file.vt_analysis_id) {
+    res.json({ status: file.scan_status });
+    return;
+  }
+
+  const apiKey = process.env.VIRUSTOTAL_API_KEY;
+  if (!apiKey) {
+    res.json({ status: 'clean' });
+    return;
+  }
+
+  try {
+    const vtResult = await vtGet(`/analyses/${file.vt_analysis_id}`, apiKey);
+    if (vtResult.status !== 200) {
+      res.json({ status: 'pending' });
+      return;
+    }
+
+    const data = vtResult.data as VTAnalysisResponse;
+    if (data.data.attributes.status !== 'completed') {
+      res.json({ status: 'pending' });
+      return;
+    }
+
+    const stats = data.data.attributes.stats;
+
+    if (isMalicious(stats)) {
+      fs.unlink(path.join(FILES_DIR, file.filename), () => undefined);
+      await pool.query(
+        `UPDATE files SET scan_status = 'rejected', vt_analysis_id = NULL WHERE id = $1`,
+        [id],
+      );
+      res.json({
+        status: 'rejected',
+        reason: `VirusTotal flagged this file: ${stats.malicious} malicious, ${stats.suspicious} suspicious detections.`,
+      });
+      return;
+    }
+
+    await pool.query(
+      `UPDATE files SET scan_status = 'clean', vt_analysis_id = NULL WHERE id = $1`,
+      [id],
+    );
+    res.json({ status: 'clean' });
+  } catch (err) {
+    console.error('[files] scan status check error:', err instanceof Error ? err.message : err);
+    res.json({ status: 'pending' });
+  }
+}
+
+export async function viewFile(req: Request, res: Response): Promise<void> {
+  const id = parseInt(req.params.id, 10);
+  const result = await pool.query<Pick<FileRow, 'filename' | 'original_name' | 'mime_type' | 'scan_status'>>(
+    'SELECT filename, original_name, mime_type, scan_status FROM files WHERE id = $1',
+    [id],
+  );
+  const file = result.rows[0];
+
+  if (!file) { res.status(404).json({ error: 'File not found' }); return; }
+  if (file.scan_status === 'pending') { res.status(202).json({ error: 'File is still being scanned. Please wait.' }); return; }
+  if (file.scan_status === 'rejected') { res.status(410).json({ error: 'This file was removed after being flagged by VirusTotal.' }); return; }
+
+  const filePath = path.join(FILES_DIR, file.filename);
+  if (!fs.existsSync(filePath)) { res.status(404).json({ error: 'File not found on disk' }); return; }
+
+  const safeName = encodeURIComponent(file.original_name);
+  res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${safeName}`);
+  res.setHeader('Content-Type', SAFE_INLINE_MIME.has(file.mime_type) ? file.mime_type : 'text/plain; charset=utf-8');
+  res.sendFile(filePath, (err) => {
+    if (err && !res.headersSent) res.status(500).json({ error: 'Failed to serve file' });
+  });
+}
+
+export async function downloadFile(req: Request, res: Response): Promise<void> {
+  const id = parseInt(req.params.id, 10);
+  const result = await pool.query<Pick<FileRow, 'filename' | 'original_name' | 'mime_type' | 'scan_status'>>(
+    'SELECT filename, original_name, mime_type, scan_status FROM files WHERE id = $1',
+    [id],
+  );
+  const file = result.rows[0];
+
+  if (!file) { res.status(404).json({ error: 'File not found' }); return; }
+  if (file.scan_status === 'pending') { res.status(202).json({ error: 'File is still being scanned. Please wait.' }); return; }
+  if (file.scan_status === 'rejected') { res.status(410).json({ error: 'This file was removed after being flagged by VirusTotal.' }); return; }
+
+  const filePath = path.join(FILES_DIR, file.filename);
+  if (!fs.existsSync(filePath)) { res.status(404).json({ error: 'File not found on disk' }); return; }
+
+  res.download(filePath, file.original_name, (err) => {
+    if (err && !res.headersSent) res.status(500).json({ error: 'Download failed' });
+  });
+}
+
+export async function deleteFile(req: Request, res: Response): Promise<void> {
+  const id = parseInt(req.params.id, 10);
+
+  const result = await pool.query<{ user_id: number; filename: string }>(
+    'SELECT user_id, filename FROM files WHERE id = $1',
+    [id],
+  );
+  const file = result.rows[0];
+
+  if (!file) { res.status(404).json({ error: 'File not found' }); return; }
+  if (file.user_id !== req.user!.sub) {
+    res.status(403).json({ error: 'You can only delete your own files' });
+    return;
+  }
+
+  fs.unlink(path.join(FILES_DIR, file.filename), () => undefined);
+  await pool.query('DELETE FROM files WHERE id = $1', [id]);
+  res.status(204).send();
+}

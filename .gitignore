@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+.claude 
+docs-dontpush-/
+
+# Environment files — never commit real secrets
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Build output
+dist/
+dist-ssr/
+
+# Logs and runtime artifacts
+*.log
+*.txt
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.sw?
+*.njsproj
+*.sln
+
+# Claude Code local settings (machine-specific)
+.claude/settings.local.json
+CLAUDE.md 
+AGENTS.md 
