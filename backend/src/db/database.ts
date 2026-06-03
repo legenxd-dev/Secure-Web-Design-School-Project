@@ -21,6 +21,16 @@ export async function initDb(): Promise<void> {
   `);
 
   await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS password_version INTEGER NOT NULL DEFAULT 0
+  `);
+
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS avatar TEXT DEFAULT NULL
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS messages (
       id         SERIAL PRIMARY KEY,
       user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

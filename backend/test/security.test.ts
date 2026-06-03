@@ -27,6 +27,15 @@ function authCookie(userId = 1, passwordVersion = 0): string {
   return `auth_token=${token}`;
 }
 
+function legacyAuthCookie(userId = 1): string {
+  const token = jwt.sign(
+    { sub: userId, username: 'alice' },
+    JWT_SECRET,
+    { expiresIn: '7d' },
+  );
+  return `auth_token=${token}`;
+}
+
 beforeEach(() => {
   process.env.JWT_SECRET = JWT_SECRET;
   process.env.FRONTEND_ORIGIN = FRONTEND_ORIGIN;
@@ -149,5 +158,21 @@ describe('security behavior', () => {
 
     assert.equal(res.status, 400);
     assert.equal(res.body.error, 'File type not allowed');
+  });
+
+  it('accepts legacy zero-version sessions for avatar upload auth', async () => {
+    mockQuery(async () => ({ rows: [{ password_version: 0 }] }));
+
+    const res = await request(app)
+      .post('/api/users/me/avatar')
+      .set('Origin', FRONTEND_ORIGIN)
+      .set('Cookie', legacyAuthCookie(1))
+      .attach('avatar', Buffer.from('not-a-real-image'), {
+        filename: 'avatar.png',
+        contentType: 'image/png',
+      });
+
+    assert.equal(res.status, 422);
+    assert.equal(res.body.error, 'File content does not match an allowed image format');
   });
 });

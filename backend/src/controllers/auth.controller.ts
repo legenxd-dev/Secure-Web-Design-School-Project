@@ -9,7 +9,7 @@ interface UserRow {
   username: string;
   email: string;
   password_hash: string;
-  password_version: number;
+  password_version: number | null;
   avatar: string | null;
 }
 
@@ -92,7 +92,7 @@ export async function login(req: Request, res: Response): Promise<void> {
   }
 
   const token = jwt.sign(
-    { sub: user.id, username: user.username, pv: user.password_version },
+    { sub: user.id, username: user.username, pv: Number(user.password_version ?? 0) },
     process.env.JWT_SECRET!,
     { expiresIn: '7d' },
   );

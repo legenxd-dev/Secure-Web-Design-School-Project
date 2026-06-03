@@ -7,7 +7,7 @@ const COOKIE_NAME = 'auth_token';
 export interface JwtPayload {
   sub: number;
   username: string;
-  pv: number;
+  pv?: number;
 }
 
 declare global {
@@ -52,7 +52,9 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       [payload.sub],
     );
     const dbUser = result.rows[0];
-    if (!dbUser || dbUser.password_version !== payload.pv) {
+    const dbPasswordVersion = Number(dbUser?.password_version ?? 0);
+    const tokenPasswordVersion = Number(payload.pv ?? 0);
+    if (!dbUser || dbPasswordVersion !== tokenPasswordVersion) {
       clearAuthCookie(res);
       res.status(401).json({ error: 'Session expired. Please log in again.' });
       return;
