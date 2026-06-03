@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import Topbar from '../components/Topbar';
 import ErrorMessage from '../components/ErrorMessage';
 import { getApiError } from '../utils/apiError';
@@ -40,7 +40,7 @@ export default function MessagesPage() {
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState('');
 
-  async function fetchMessages() {
+  const fetchMessages = useCallback(async () => {
     setListError('');
     try {
       const res = await apiClient.get<Message[]>('/api/messages');
@@ -50,11 +50,11 @@ export default function MessagesPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    fetchMessages();
-  }, []);
+    void fetchMessages();
+  }, [fetchMessages]);
 
   async function handlePost(e: React.FormEvent) {
     e.preventDefault();

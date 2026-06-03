@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import pool from '../db/database';
 
+const COOKIE_NAME = 'auth_token';
+
 export interface JwtPayload {
   sub: number;
   username: string;
@@ -16,6 +18,17 @@ declare global {
   }
 }
 
+function clearAuthCookie(res: Response): void {
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  res.clearCookie(COOKIE_NAME, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'strict',
+    path: '/',
+  });
+}
+
 export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   const token = req.cookies?.auth_token;
 
@@ -28,6 +41,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   try {
     payload = jwt.verify(token, process.env.JWT_SECRET!) as unknown as JwtPayload;
   } catch {
+    clearAuthCookie(res);
     res.status(401).json({ error: 'Invalid or expired token' });
     return;
   }
@@ -39,6 +53,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     );
     const dbUser = result.rows[0];
     if (!dbUser || dbUser.password_version !== payload.pv) {
+      clearAuthCookie(res);
       res.status(401).json({ error: 'Session expired. Please log in again.' });
       return;
     }

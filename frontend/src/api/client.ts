@@ -8,8 +8,10 @@ const apiClient = axios.create({
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      window.location.href = '/login';
+    const url: string = error.config?.url ?? '';
+    const isAuthSelfCheck = url.includes('/api/users/me') || url.includes('/api/auth/');
+    if (error.response?.status === 401 && !isAuthSelfCheck) {
+      window.dispatchEvent(new Event('auth:unauthorized'));
     }
     return Promise.reject(error);
   },

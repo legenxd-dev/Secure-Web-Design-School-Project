@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import Topbar from '../components/Topbar';
 import ErrorMessage from '../components/ErrorMessage';
 import { getApiError } from '../utils/apiError';
@@ -76,7 +76,7 @@ export default function FilesPage() {
   const [uploadError, setUploadError] = useState('');
   const [uploadProgress, setUploadProgress] = useState('');
 
-  async function fetchFiles() {
+  const fetchFiles = useCallback(async () => {
     setListError('');
     try {
       const res = await apiClient.get<SharedFile[]>('/api/files');
@@ -86,11 +86,11 @@ export default function FilesPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    fetchFiles();
-  }, []);
+    void fetchFiles();
+  }, [fetchFiles]);
 
   useEffect(() => {
     const pendingIds = files.filter(f => f.scan_status === 'pending' && f.user_id === user?.id).map(f => f.id);
@@ -110,7 +110,7 @@ export default function FilesPage() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [files]);
+  }, [files, user?.id]);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     setUploadError('');
@@ -169,7 +169,7 @@ export default function FilesPage() {
         <div className={styles.pageHeader}>
           <div>
             <h1 className={styles.pageTitle}>File Sharing</h1>
-            <p className={styles.pageDesc}>Share and view files. All uploads are scanned by VirusTotal before being accepted.</p>
+            <p className={styles.pageDesc}>Share files after they pass the VirusTotal safety check. Preview and download stay locked while scanning.</p>
           </div>
           {!composing && (
             <button className={styles.newBtn} onClick={() => setComposing(true)}>
@@ -221,7 +221,7 @@ export default function FilesPage() {
                   onChange={handleFileChange}
                   required
                 />
-                <span className={styles.hint}>Max 10 MB. Any file type. Scanned by VirusTotal before upload.</span>
+                <span className={styles.hint}>Max 10 MB. Preview and download unlock only after a clean VirusTotal result.</span>
               </div>
               {uploadError && <ErrorMessage message={uploadError} />}
               {uploadProgress && (

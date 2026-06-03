@@ -25,7 +25,7 @@ const SELECT_COMMENT = `
 
 export async function getComments(req: Request, res: Response): Promise<void> {
   const postType = req.params.postType;
-  const postId = parseInt(req.params.postId, 10);
+  const postId = parseInt(String(req.params.postId), 10);
 
   if (postType !== 'message' && postType !== 'file') {
     res.status(400).json({ error: 'Invalid post type' });
@@ -41,7 +41,7 @@ export async function getComments(req: Request, res: Response): Promise<void> {
 
 export async function postComment(req: Request, res: Response): Promise<void> {
   const postType = req.params.postType;
-  const postId = parseInt(req.params.postId, 10);
+  const postId = parseInt(String(req.params.postId), 10);
   const { content } = req.body as { content?: string };
 
   const parentTable = resolveParentTable(postType);
@@ -79,7 +79,7 @@ export async function postComment(req: Request, res: Response): Promise<void> {
 }
 
 export async function deleteComment(req: Request, res: Response): Promise<void> {
-  const id = parseInt(req.params.commentId, 10);
+  const id = parseInt(String(req.params.commentId), 10);
 
   const result = await pool.query<{ user_id: number }>(
     'SELECT user_id FROM comments WHERE id = $1',

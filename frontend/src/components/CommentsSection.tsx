@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import apiClient from '../api/client';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import ErrorMessage from './ErrorMessage';
 import { getApiError } from '../utils/apiError';
 import styles from './CommentsSection.module.css';
@@ -33,7 +33,7 @@ export default function CommentsSection({ postType, postId }: Props) {
 
   const base = postType === 'message' ? '/api/messages' : '/api/files';
 
-  async function fetchComments() {
+  const fetchComments = useCallback(async () => {
     setLoadError('');
     try {
       const res = await apiClient.get<Comment[]>(`${base}/${postId}/comments`);
@@ -43,12 +43,11 @@ export default function CommentsSection({ postType, postId }: Props) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [base, postId]);
 
   useEffect(() => {
-    fetchComments();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [postId]);
+    void fetchComments();
+  }, [fetchComments]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

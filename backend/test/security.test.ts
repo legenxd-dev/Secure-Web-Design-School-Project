@@ -1,0 +1,153 @@
+import assert from 'node:assert/strict';
+import { afterEach, beforeEach, describe, it } from 'node:test';
+import jwt from 'jsonwebtoken';
+import request from 'supertest';
+import app from '../src/app';
+import pool from '../src/db/database';
+
+const FRONTEND_ORIGIN = 'http://localhost:5173';
+const JWT_SECRET = 'test_secret_minimum_32_characters_long';
+
+type QueryResult = { rows: unknown[] };
+type QueryMock = (sql: string, params?: unknown[]) => Promise<QueryResult>;
+
+const originalQuery = pool.query.bind(pool);
+const originalEnv = { ...process.env };
+
+function mockQuery(fn: QueryMock): void {
+  pool.query = ((sql: string, params?: unknown[]) => fn(sql, params)) as typeof pool.query;
+}
+
+function authCookie(userId = 1, passwordVersion = 0): string {
+  const token = jwt.sign(
+    { sub: userId, username: 'alice', pv: passwordVersion },
+    JWT_SECRET,
+    { expiresIn: '7d' },
+  );
+  return `auth_token=${token}`;
+}
+
+beforeEach(() => {
+  process.env.JWT_SECRET = JWT_SECRET;
+  process.env.FRONTEND_ORIGIN = FRONTEND_ORIGIN;
+  delete process.env.VIRUSTOTAL_API_KEY;
+});
+
+afterEach(() => {
+  pool.query = originalQuery;
+  process.env = { ...originalEnv };
+});
+
+describe('security behavior', () => {
+  it('rejects unsafe cross-origin requests before route handlers run', async () => {
+    const res = await request(app)
+      .post('/api/auth/logout')
+      .set('Origin', 'https://attacker.example');
+
+    assert.equal(res.status, 403);
+    assert.equal(res.body.error, 'Untrusted request origin');
+  });
+
+  it('registers a valid user with parameterized database calls', async () => {
+    const calls: string[] = [];
+    mockQuery(async (sql) => {
+      calls.push(sql);
+      if (sql.includes('SELECT id FROM users')) return { rows: [] };
+      if (sql.includes('INSERT INTO users')) return { rows: [] };
+      throw new Error(`Unexpected query: ${sql}`);
+    });
+
+    const res = await request(app)
+      .post('/api/auth/register')
+      .set('Origin', FRONTEND_ORIGIN)
+      .send({
+        username: 'alice_1',
+        email: 'alice@example.com',
+        password: 'averystrongpassword',
+      });
+
+    assert.equal(res.status, 201);
+    assert.equal(calls.length, 2);
+  });
+
+  it('returns 401 for invalid login credentials', async () => {
+    mockQuery(async () => ({ rows: [] }));
+
+    const res = await request(app)
+      .post('/api/auth/login')
+      .set('Origin', FRONTEND_ORIGIN)
+      .send({ email: 'alice@example.com', password: 'wrong-password' });
+
+    assert.equal(res.status, 401);
+    assert.equal(res.body.error, 'Invalid credentials');
+  });
+
+  it('protects authenticated routes when no cookie is present', async () => {
+    const res = await request(app).get('/api/users/me');
+
+    assert.equal(res.status, 401);
+    assert.equal(res.body.error, 'Authentication required');
+  });
+
+  it('rejects stale password-version sessions and clears the auth cookie', async () => {
+    mockQuery(async () => ({ rows: [{ password_version: 1 }] }));
+
+    const res = await request(app)
+      .get('/api/users/me')
+      .set('Cookie', authCookie(1, 0));
+    const setCookie = res.headers['set-cookie'];
+    const cookieHeader = Array.isArray(setCookie) ? setCookie.join(';') : String(setCookie ?? '');
+
+    assert.equal(res.status, 401);
+    assert.match(cookieHeader, /auth_token=;/);
+  });
+
+  it('prevents deleting another user message', async () => {
+    const results = [
+      { rows: [{ password_version: 0 }] },
+      { rows: [{ user_id: 2 }] },
+    ];
+    mockQuery(async () => results.shift() ?? { rows: [] });
+
+    const res = await request(app)
+      .delete('/api/messages/10')
+      .set('Origin', FRONTEND_ORIGIN)
+      .set('Cookie', authCookie(1, 0));
+
+    assert.equal(res.status, 403);
+  });
+
+  it('fails file sharing closed when VirusTotal is not configured', async () => {
+    mockQuery(async () => ({ rows: [{ password_version: 0 }] }));
+
+    const res = await request(app)
+      .post('/api/files')
+      .set('Origin', FRONTEND_ORIGIN)
+      .set('Cookie', authCookie(1, 0))
+      .field('title', 'Sample file')
+      .attach('file', Buffer.from('%PDF-1.4\n'), {
+        filename: 'sample.pdf',
+        contentType: 'application/pdf',
+      });
+
+    assert.equal(res.status, 503);
+    assert.match(res.body.error, /VirusTotal API key/);
+  });
+
+  it('rejects blocked executable upload extensions before scanning', async () => {
+    mockQuery(async () => ({ rows: [{ password_version: 0 }] }));
+
+    const res = await request(app)
+      .post('/api/files')
+      .set('Origin', FRONTEND_ORIGIN)
+      .set('Cookie', authCookie(1, 0))
+      .field('title', 'Bad file')
+      .attach('file', Buffer.from('echo bad'), {
+        filename: 'bad.exe',
+        contentType: 'application/octet-stream',
+      });
+
+    assert.equal(res.status, 400);
+    assert.equal(res.body.error, 'File type not allowed');
+  });
+});

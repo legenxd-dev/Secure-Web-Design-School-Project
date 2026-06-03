@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import type { User } from '../types';
 import Topbar from '../components/Topbar';
 import ErrorMessage from '../components/ErrorMessage';
@@ -12,7 +13,8 @@ const MAX_FILE_SIZE = 2 * 1024 * 1024;
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 export default function ProfilePage() {
-  const { user, updateUser } = useAuth();
+  const navigate = useNavigate();
+  const { user, updateUser, logout } = useAuth();
 
   const [profile, setProfile] = useState<User | null>(user);
   const [preview, setPreview] = useState<string | null>(null);
@@ -43,6 +45,12 @@ export default function ProfilePage() {
     });
   }, [updateUser]);
 
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview);
+    };
+  }, [preview]);
+
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     setUploadError('');
     const file = e.target.files?.[0];
@@ -55,6 +63,7 @@ export default function ProfilePage() {
       setUploadError('File must be smaller than 2 MB');
       return;
     }
+    if (preview) URL.revokeObjectURL(preview);
     setSelectedFile(file);
     setPreview(URL.createObjectURL(file));
   }
@@ -115,7 +124,8 @@ export default function ProfilePage() {
         current_password: currentPwd,
         new_password: newPwd,
       });
-      setPwdMsg('Password changed successfully');
+      await logout();
+      navigate('/login', { replace: true, state: { message: 'Password changed. Please sign in again.' } });
       setCurrentPwd('');
       setNewPwd('');
       setConfirmPwd('');

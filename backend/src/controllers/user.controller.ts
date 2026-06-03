@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import bcrypt from 'bcryptjs';
 import pool from '../db/database';
 import { validateImageMagicBytes } from '../utils/fileValidation';
@@ -115,7 +115,7 @@ export async function uploadAvatar(req: Request, res: Response): Promise<void> {
   }
 
   const ext = path.extname(req.file.originalname).toLowerCase() || '.jpg';
-  const safeFilename = `${uuidv4()}${ext}`;
+  const safeFilename = `${randomUUID()}${ext}`;
   const finalPath = path.join(process.cwd(), 'uploads', 'avatars', safeFilename);
 
   try {

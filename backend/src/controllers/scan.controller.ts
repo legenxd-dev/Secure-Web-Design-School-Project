@@ -18,7 +18,7 @@ export async function checkAnalysis(req: Request, res: Response): Promise<void> 
     return;
   }
 
-  const { id } = req.params;
+  const id = String(req.params.id ?? '');
   if (!id || !/^[A-Za-z0-9+/=_\-]+$/.test(id)) {
     res.status(400).json({ error: 'Invalid analysis ID' });
     return;

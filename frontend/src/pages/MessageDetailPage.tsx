@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import apiClient from '../api/client';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import Topbar from '../components/Topbar';
 import CommentsSection from '../components/CommentsSection';
 import ErrorMessage from '../components/ErrorMessage';

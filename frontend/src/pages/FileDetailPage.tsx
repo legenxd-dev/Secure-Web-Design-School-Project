@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import apiClient from '../api/client';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import Topbar from '../components/Topbar';
 import CommentsSection from '../components/CommentsSection';
 import ErrorMessage from '../components/ErrorMessage';
@@ -35,9 +35,7 @@ function isImage(mime: string) { return mime.startsWith('image/'); }
 function isText(mime: string) {
   return mime.startsWith('text/') ||
     mime === 'application/json' ||
-    mime === 'application/xml' ||
-    mime === 'application/javascript' ||
-    mime === 'application/typescript';
+    mime === 'application/xml';
 }
 function isPdf(mime: string) { return mime === 'application/pdf'; }
 function isVideo(mime: string) { return mime.startsWith('video/'); }
@@ -55,16 +53,33 @@ function FilePreview({ file }: { file: SharedFile }) {
     const mime = file.mime_type;
     if (!isPreviewable(mime)) return;
     setPreviewLoading(true);
+    setBlobUrl(null);
+    setTextContent(null);
+    let createdUrl: string | null = null;
+    let cancelled = false;
     apiClient
       .get(`/api/files/${file.id}/view`, { responseType: isText(mime) ? 'text' : 'blob' })
       .then((r) => {
-        if (isText(mime)) setTextContent(r.data as string);
-        else setBlobUrl(URL.createObjectURL(r.data as Blob));
+        if (cancelled) return;
+        if (isText(mime)) {
+          setTextContent(r.data as string);
+        } else {
+          createdUrl = URL.createObjectURL(r.data as Blob);
+          setBlobUrl(createdUrl);
+        }
       })
-      .catch(() => setTextContent('Failed to load preview'))
-      .finally(() => setPreviewLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [file.id]);
+      .catch(() => {
+        if (!cancelled) setTextContent('Failed to load preview');
+      })
+      .finally(() => {
+        if (!cancelled) setPreviewLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
+  }, [file.id, file.mime_type]);
 
   if (previewLoading) return <p className={styles.previewLoading}>Loading preview...</p>;
 
@@ -143,7 +158,7 @@ export default function FileDetailPage() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [file?.id, file?.scan_status]);
+  }, [file, user?.id]);
 
   async function handleDelete() {
     if (!file) return;

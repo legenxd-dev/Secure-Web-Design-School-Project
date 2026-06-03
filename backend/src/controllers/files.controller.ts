@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import pool from '../db/database';
 import {
   sha256,
@@ -49,6 +49,10 @@ function isMalicious(stats: { malicious: number; suspicious: number }): boolean 
   return stats.malicious > 0 || stats.suspicious > 0;
 }
 
+function removeStoredFile(filename: string): void {
+  fs.unlink(path.join(FILES_DIR, filename), () => undefined);
+}
+
 export async function getFiles(_req: Request, res: Response): Promise<void> {
   const result = await pool.query<FileRow>(
     `${SELECT_FILES} ORDER BY f.created_at DESC LIMIT 200`,
@@ -57,7 +61,7 @@ export async function getFiles(_req: Request, res: Response): Promise<void> {
 }
 
 export async function getFileById(req: Request, res: Response): Promise<void> {
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(String(req.params.id), 10);
   const result = await pool.query<FileRow>(`${SELECT_FILES} WHERE f.id = $1`, [id]);
   const file = result.rows[0];
   if (!file) {
@@ -103,27 +107,15 @@ export async function uploadFile(req: Request, res: Response): Promise<void> {
   }
 
   const ext = path.extname(originalname);
-  const safeFilename = `${uuidv4()}${ext}`;
-  const filePath = path.join(FILES_DIR, safeFilename);
-
-  try {
-    fs.writeFileSync(filePath, buffer);
-  } catch {
-    res.status(500).json({ error: 'Failed to save file' });
-    return;
-  }
-
   const apiKey = process.env.VIRUSTOTAL_API_KEY;
 
   if (!apiKey) {
-    const insertResult = await pool.query<{ id: number }>(
-      'INSERT INTO files (user_id, title, description, filename, original_name, mime_type, size, scan_status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id',
-      [req.user!.sub, title.trim(), (description ?? '').trim(), safeFilename, originalname, mimetype, size, 'clean'],
-    );
-    const file = (await pool.query<FileRow>(`${SELECT_FILES} WHERE f.id = $1`, [insertResult.rows[0].id])).rows[0];
-    res.status(201).json(file);
+    res.status(503).json({ error: 'VirusTotal API key is not configured. File sharing is disabled.' });
     return;
   }
+
+  const safeFilename = `${randomUUID()}${ext}`;
+  const filePath = path.join(FILES_DIR, safeFilename);
 
   try {
     const hash = sha256(buffer);
@@ -134,10 +126,16 @@ export async function uploadFile(req: Request, res: Response): Promise<void> {
       const stats = data.data.attributes.last_analysis_stats;
 
       if (isMalicious(stats)) {
-        fs.unlink(filePath, () => undefined);
         res.status(422).json({
           error: `File rejected by VirusTotal: ${stats.malicious} malicious, ${stats.suspicious} suspicious detections.`,
         });
+        return;
+      }
+
+      try {
+        fs.writeFileSync(filePath, buffer);
+      } catch {
+        res.status(500).json({ error: 'Failed to save file' });
         return;
       }
 
@@ -157,29 +155,37 @@ export async function uploadFile(req: Request, res: Response): Promise<void> {
       analysisId = (uploadRes.data as VTUploadResponse).data.id;
     } else {
       console.warn('[files] VT upload failed with status', uploadRes.status);
+      res.status(502).json({ error: `VirusTotal upload failed (HTTP ${uploadRes.status})` });
+      return;
     }
 
-    const scanStatus = analysisId ? 'pending' : 'pending';
+    if (!analysisId) {
+      res.status(502).json({ error: 'VirusTotal did not return an analysis ID' });
+      return;
+    }
+
+    try {
+      fs.writeFileSync(filePath, buffer);
+    } catch {
+      res.status(500).json({ error: 'Failed to save file' });
+      return;
+    }
 
     const insertResult = await pool.query<{ id: number }>(
       'INSERT INTO files (user_id, title, description, filename, original_name, mime_type, size, scan_status, vt_analysis_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id',
-      [req.user!.sub, title.trim(), (description ?? '').trim(), safeFilename, originalname, mimetype, size, scanStatus, analysisId],
+      [req.user!.sub, title.trim(), (description ?? '').trim(), safeFilename, originalname, mimetype, size, 'pending', analysisId],
     );
     const file = (await pool.query<FileRow>(`${SELECT_FILES} WHERE f.id = $1`, [insertResult.rows[0].id])).rows[0];
     res.status(201).json(file);
   } catch (err) {
     console.error('[files] VT error during upload:', err instanceof Error ? err.message : err);
-    const insertResult = await pool.query<{ id: number }>(
-      'INSERT INTO files (user_id, title, description, filename, original_name, mime_type, size, scan_status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id',
-      [req.user!.sub, title.trim(), (description ?? '').trim(), safeFilename, originalname, mimetype, size, 'pending'],
-    );
-    const file = (await pool.query<FileRow>(`${SELECT_FILES} WHERE f.id = $1`, [insertResult.rows[0].id])).rows[0];
-    res.status(201).json(file);
+    removeStoredFile(safeFilename);
+    res.status(502).json({ error: 'VirusTotal scan failed. File was not accepted.' });
   }
 }
 
 export async function checkFileScanStatus(req: Request, res: Response): Promise<void> {
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(String(req.params.id), 10);
 
   const result = await pool.query<{ id: number; user_id: number; filename: string; scan_status: string; vt_analysis_id: string | null }>(
     'SELECT id, user_id, filename, scan_status, vt_analysis_id FROM files WHERE id = $1',
@@ -204,7 +210,7 @@ export async function checkFileScanStatus(req: Request, res: Response): Promise<
 
   const apiKey = process.env.VIRUSTOTAL_API_KEY;
   if (!apiKey) {
-    res.json({ status: 'clean' });
+    res.json({ status: 'pending' });
     return;
   }
 
@@ -248,7 +254,7 @@ export async function checkFileScanStatus(req: Request, res: Response): Promise<
 }
 
 export async function viewFile(req: Request, res: Response): Promise<void> {
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(String(req.params.id), 10);
   const result = await pool.query<Pick<FileRow, 'filename' | 'original_name' | 'mime_type' | 'scan_status'>>(
     'SELECT filename, original_name, mime_type, scan_status FROM files WHERE id = $1',
     [id],
@@ -271,7 +277,7 @@ export async function viewFile(req: Request, res: Response): Promise<void> {
 }
 
 export async function downloadFile(req: Request, res: Response): Promise<void> {
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(String(req.params.id), 10);
   const result = await pool.query<Pick<FileRow, 'filename' | 'original_name' | 'mime_type' | 'scan_status'>>(
     'SELECT filename, original_name, mime_type, scan_status FROM files WHERE id = $1',
     [id],
@@ -291,7 +297,7 @@ export async function downloadFile(req: Request, res: Response): Promise<void> {
 }
 
 export async function deleteFile(req: Request, res: Response): Promise<void> {
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(String(req.params.id), 10);
 
   const result = await pool.query<{ user_id: number; filename: string }>(
     'SELECT user_id, filename FROM files WHERE id = $1',

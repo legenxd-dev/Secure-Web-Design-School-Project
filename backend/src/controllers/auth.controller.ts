@@ -16,10 +16,12 @@ interface UserRow {
 const COOKIE_NAME = 'auth_token';
 
 function cookieOptions() {
+  const isProduction = process.env.NODE_ENV === 'production';
+
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict' as const,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' as const : 'strict' as const,
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: '/',
   };
@@ -110,7 +112,7 @@ export function logout(_req: Request, res: Response): void {
   res.clearCookie(COOKIE_NAME, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
     path: '/',
   });
   res.json({ message: 'Logged out successfully' });

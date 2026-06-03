@@ -17,7 +17,7 @@ const SELECT_MESSAGES = `
 `;
 
 export async function getMessageById(req: Request, res: Response): Promise<void> {
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(String(req.params.id), 10);
   const result = await pool.query<MessageRow>(
     `${SELECT_MESSAGES} WHERE m.id = $1`,
     [id],
@@ -71,7 +71,7 @@ export async function postMessage(req: Request, res: Response): Promise<void> {
 }
 
 export async function deleteMessage(req: Request, res: Response): Promise<void> {
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(String(req.params.id), 10);
 
   const result = await pool.query<{ user_id: number }>(
     'SELECT user_id FROM messages WHERE id = $1',
