@@ -5,6 +5,7 @@ import ErrorMessage from './ErrorMessage';
 import UserAvatar from './UserAvatar';
 import { getApiError } from '../utils/apiError';
 import { formatDateTime } from '../utils/date';
+import { canModerate } from '../utils/permissions';
 import styles from './CommentsSection.module.css';
 
 interface Comment {
@@ -119,7 +120,7 @@ export default function CommentsSection({ postType, postId }: Props) {
                 <div className={styles.commentHeader}>
                   <span className={styles.commentAuthor}>{c.username}</span>
                   <span className={styles.commentDate}>{formatDateTime(c.created_at)}</span>
-                  {user?.id === c.user_id && (
+                  {canModerate(user, c.user_id) && (
                     <button
                       className={styles.deleteBtn}
                       onClick={() => handleDelete(c.id)}

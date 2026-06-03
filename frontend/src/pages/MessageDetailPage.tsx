@@ -8,6 +8,7 @@ import ErrorMessage from '../components/ErrorMessage';
 import UserAvatar from '../components/UserAvatar';
 import { getApiError } from '../utils/apiError';
 import { formatDateTime } from '../utils/date';
+import { canModerate } from '../utils/permissions';
 import styles from './Detail.module.css';
 
 interface Message {
@@ -72,7 +73,7 @@ export default function MessageDetailPage() {
                   <span className={styles.metaAuthor}>{message.username}</span>
                   <span className={styles.metaDate}>{formatDateTime(message.created_at)}</span>
                 </div>
-                {user?.id === message.user_id && (
+                {canModerate(user, message.user_id) && (
                   <button className={styles.deleteBtn} onClick={handleDelete} title="Delete post">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="3 6 5 6 21 6" />

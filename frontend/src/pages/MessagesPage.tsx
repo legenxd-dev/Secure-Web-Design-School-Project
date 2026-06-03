@@ -7,6 +7,7 @@ import ErrorMessage from '../components/ErrorMessage';
 import UserAvatar from '../components/UserAvatar';
 import { getApiError } from '../utils/apiError';
 import { formatDateTime } from '../utils/date';
+import { canModerate } from '../utils/permissions';
 import styles from './Messages.module.css';
 
 interface Message {
@@ -166,7 +167,7 @@ export default function MessagesPage() {
                       </div>
                     </div>
                     <div className={styles.threadRight}>
-                      {user?.id === m.user_id && (
+                      {canModerate(user, m.user_id) && (
                         <button
                           className={styles.deleteBtn}
                           onClick={(e) => { e.stopPropagation(); handleDelete(m.id); }}

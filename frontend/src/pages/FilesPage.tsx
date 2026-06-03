@@ -7,6 +7,7 @@ import ErrorMessage from '../components/ErrorMessage';
 import UserAvatar from '../components/UserAvatar';
 import { getApiError } from '../utils/apiError';
 import { formatDateTime } from '../utils/date';
+import { canModerate } from '../utils/permissions';
 import styles from './Files.module.css';
 
 interface SharedFile {
@@ -246,7 +247,7 @@ export default function FilesPage() {
                       {f.scan_status === 'rejected' && (
                         <span className={styles.scanBadgeRejected}>Rejected</span>
                       )}
-                      {user?.id === f.user_id && (
+                      {canModerate(user, f.user_id) && (
                         <button
                           className={styles.deleteBtn}
                           onClick={(e) => { e.stopPropagation(); handleDelete(f.id); }}
