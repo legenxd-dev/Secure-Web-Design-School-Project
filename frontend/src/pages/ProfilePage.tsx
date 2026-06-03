@@ -6,12 +6,10 @@ import type { User } from '../types';
 import Topbar from '../components/Topbar';
 import ErrorMessage from '../components/ErrorMessage';
 import { getApiError } from '../utils/apiError';
+import { apiBaseUrl } from '../config/api';
 import styles from './Profile.module.css';
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? (
-  import.meta.env.PROD ? window.location.origin : 'http://localhost:4000'
-);
-const AVATAR_BASE = `${apiBaseUrl}/uploads/avatars/`;
+const AVATAR_BASE = `${apiBaseUrl()}/uploads/avatars/`;
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 

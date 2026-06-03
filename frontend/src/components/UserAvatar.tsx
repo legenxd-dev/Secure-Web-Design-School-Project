@@ -1,9 +1,7 @@
 import styles from './UserAvatar.module.css';
+import { apiBaseUrl } from '../config/api';
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? (
-  import.meta.env.PROD ? window.location.origin : 'http://localhost:4000'
-);
-const AVATAR_BASE = `${apiBaseUrl}/uploads/avatars/`;
+const AVATAR_BASE = `${apiBaseUrl()}/uploads/avatars/`;
 
 function avatarUrl(avatar: string): string {
   if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
