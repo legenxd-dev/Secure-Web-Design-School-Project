@@ -7,6 +7,7 @@ import path from 'path';
 
 import { uploadLimiter, apiLimiter } from './middleware/rateLimiters';
 import { requireTrustedOrigin } from './middleware/originGuard.middleware';
+import { isAllowedOrigin } from './utils/origin';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import scanRoutes from './routes/scan.routes';
@@ -38,12 +39,13 @@ app.use(
   }),
 );
 
-app.use(
-  cors({
-    origin: process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173',
+app.use(cors((req, callback) => {
+  const origin = req.get('origin');
+  callback(null, {
+    origin: !origin || isAllowedOrigin(origin, req),
     credentials: true,
-  }),
-);
+  });
+}));
 
 app.use(cookieParser());
 app.use(express.json({ limit: '50kb' }));

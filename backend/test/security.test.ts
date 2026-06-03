@@ -58,6 +58,31 @@ describe('security behavior', () => {
     assert.equal(res.body.error, 'Untrusted request origin');
   });
 
+  it('allows unsafe requests from the deployed same-origin host', async () => {
+    process.env.FRONTEND_ORIGIN = 'https://stale-frontend.example';
+    const calls: string[] = [];
+    mockQuery(async (sql) => {
+      calls.push(sql);
+      if (sql.includes('SELECT id FROM users')) return { rows: [] };
+      if (sql.includes('INSERT INTO users')) return { rows: [] };
+      throw new Error(`Unexpected query: ${sql}`);
+    });
+
+    const res = await request(app)
+      .post('/api/auth/register')
+      .set('Origin', 'https://secure-web-design-school-project.onrender.com')
+      .set('Host', 'secure-web-design-school-project.onrender.com')
+      .set('X-Forwarded-Proto', 'https')
+      .send({
+        username: 'same_origin_user',
+        email: 'same_origin@example.com',
+        password: 'averystrongpassword',
+      });
+
+    assert.equal(res.status, 201);
+    assert.equal(calls.length, 2);
+  });
+
   it('registers a valid user with parameterized database calls', async () => {
     const calls: string[] = [];
     mockQuery(async (sql) => {

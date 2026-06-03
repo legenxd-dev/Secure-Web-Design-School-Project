@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { isAllowedOrigin } from '../utils/origin';
 
 const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
@@ -8,7 +9,6 @@ export function requireTrustedOrigin(req: Request, res: Response, next: NextFunc
     return;
   }
 
-  const expectedOrigin = process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173';
   const origin = req.get('origin');
 
   if (!origin && process.env.NODE_ENV !== 'production') {
@@ -16,7 +16,7 @@ export function requireTrustedOrigin(req: Request, res: Response, next: NextFunc
     return;
   }
 
-  if (origin !== expectedOrigin) {
+  if (!origin || !isAllowedOrigin(origin, req)) {
     res.status(403).json({ error: 'Untrusted request origin' });
     return;
   }
