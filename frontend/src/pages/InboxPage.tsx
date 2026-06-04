@@ -135,26 +135,51 @@ export default function InboxPage() {
         <div className={styles.boardCard}>
           {listError && <ErrorMessage message={listError} onRetry={fetchInbox} />}
           {loading ? (
-            <p className={styles.empty}>Loading...</p>
+            <div className={styles.threadList}>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className={styles.skeletonRow}>
+                  <span className={styles.skelAvatar} />
+                  <span className={styles.skelLines}>
+                    <span className={styles.skelTitle} />
+                    <span className={styles.skelSub} />
+                  </span>
+                </div>
+              ))}
+            </div>
           ) : threads.length === 0 ? (
-            <p className={styles.empty}>No messages yet.</p>
+            <div className={styles.emptyState}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
+                <polyline points="22,6 12,13 2,6" />
+              </svg>
+              <p>No messages yet</p>
+            </div>
           ) : (
             <div className={styles.threadList}>
-              {threads.map((thread) => (
-                <div key={thread.id} className={styles.thread} onClick={() => navigate(`/inbox/${thread.id}`)}>
+              {threads.map((thread, i) => (
+                <div
+                  key={thread.id}
+                  className={styles.thread}
+                  style={{ '--i': i } as React.CSSProperties}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(`/inbox/${thread.id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/inbox/${thread.id}`); }
+                  }}
+                >
                   <div className={styles.threadHeader}>
                     <div className={styles.threadLeft}>
-                      <UserAvatar username={thread.other_username} avatar={thread.other_avatar} className={styles.avatar} />
+                      <UserAvatar username={thread.other_username} avatar={thread.other_avatar} className={styles.rowAvatar} />
                       <div className={styles.threadMeta}>
                         <span className={styles.threadTitle}>{thread.other_username}</span>
                         <div className={styles.threadSub}>
                           <span className={styles.threadAuthor}>{thread.last_message ?? 'No messages yet'}</span>
-                          <span className={styles.dot}>·</span>
-                          <span className={styles.threadDate}>{formatDateTime(thread.last_message_at ?? thread.created_at)}</span>
                         </div>
                       </div>
                     </div>
                     <div className={styles.threadRight}>
+                      <span className={styles.metaDate}>{formatDateTime(thread.last_message_at ?? thread.created_at)}</span>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={styles.chevron}>
                         <polyline points="9 18 15 12 9 6" />
                       </svg>

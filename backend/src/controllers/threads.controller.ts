@@ -19,6 +19,8 @@ interface ThreadRow {
   size: number | null;
   scan_status: 'clean' | 'pending' | 'rejected' | null;
   created_at: string;
+  comment_count: number;
+  last_activity: string;
 }
 
 export async function getThreads(_req: Request, res: Response): Promise<void> {
@@ -26,16 +28,20 @@ export async function getThreads(_req: Request, res: Response): Promise<void> {
     SELECT 'message' AS type, m.id, m.user_id, u.username, u.avatar, m.title,
            m.content, NULL::TEXT AS description, NULL::TEXT AS original_name,
            NULL::TEXT AS mime_type, NULL::INTEGER AS size, NULL::TEXT AS scan_status,
-           m.created_at
+           m.created_at,
+           (SELECT COUNT(*)::INTEGER FROM comments c WHERE c.post_type = 'message' AND c.post_id = m.id) AS comment_count,
+           GREATEST(m.created_at, (SELECT MAX(c.created_at) FROM comments c WHERE c.post_type = 'message' AND c.post_id = m.id)) AS last_activity
     FROM messages m
     JOIN users u ON u.id = m.user_id
     UNION ALL
     SELECT 'file' AS type, f.id, f.user_id, u.username, u.avatar, f.title,
            NULL::TEXT AS content, f.description, f.original_name,
-           f.mime_type, f.size, f.scan_status, f.created_at
+           f.mime_type, f.size, f.scan_status, f.created_at,
+           (SELECT COUNT(*)::INTEGER FROM comments c WHERE c.post_type = 'file' AND c.post_id = f.id) AS comment_count,
+           GREATEST(f.created_at, (SELECT MAX(c.created_at) FROM comments c WHERE c.post_type = 'file' AND c.post_id = f.id)) AS last_activity
     FROM files f
     JOIN users u ON u.id = f.user_id
-    ORDER BY created_at DESC
+    ORDER BY last_activity DESC
     LIMIT 200
   `);
   res.json(result.rows);

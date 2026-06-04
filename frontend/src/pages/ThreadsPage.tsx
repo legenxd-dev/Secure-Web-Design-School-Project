@@ -26,6 +26,8 @@ interface Thread {
   size: number | null;
   scan_status: 'clean' | 'pending' | 'rejected' | null;
   created_at: string;
+  comment_count: number;
+  last_activity: string;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -162,6 +164,10 @@ export default function ThreadsPage() {
     }
   }
 
+  function openThread(thread: Thread) {
+    navigate(`/threads/${thread.type}/${thread.id}`);
+  }
+
   return (
     <div className={styles.page}>
       <Topbar active="threads" />
@@ -243,38 +249,71 @@ export default function ThreadsPage() {
         <div className={styles.boardCard}>
           {listError && <ErrorMessage message={listError} onRetry={fetchThreads} />}
           {loading ? (
-            <p className={styles.empty}>Loading...</p>
+            <div className={styles.threadList}>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className={styles.skeletonRow}>
+                  <span className={styles.skelAvatar} />
+                  <span className={styles.skelLines}>
+                    <span className={styles.skelTitle} />
+                    <span className={styles.skelSub} />
+                  </span>
+                </div>
+              ))}
+            </div>
           ) : threads.length === 0 ? (
-            <p className={styles.empty}>No threads yet. Start the discussion.</p>
+            <div className={styles.emptyState}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              <p>No threads yet</p>
+            </div>
           ) : (
             <div className={styles.threadList}>
-              {threads.map((thread) => (
+              {threads.map((thread, i) => (
                 <div
                   key={`${thread.type}-${thread.id}`}
                   className={styles.thread}
-                  onClick={() => navigate(`/threads/${thread.type}/${thread.id}`)}
+                  style={{ '--i': i } as React.CSSProperties}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openThread(thread)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openThread(thread); }
+                  }}
                 >
                   <div className={styles.threadHeader}>
                     <div className={styles.threadLeft}>
-                      <UserAvatar username={thread.username} avatar={thread.avatar} className={styles.fileIcon} />
+                      <UserAvatar username={thread.username} avatar={thread.avatar} className={styles.rowAvatar} />
                       <div className={styles.threadMeta}>
                         <span className={styles.threadTitle}>{thread.title}</span>
                         <div className={styles.threadSub}>
                           <span className={styles.threadAuthor}>{thread.username}</span>
-                          <span className={styles.dot}>·</span>
-                          <span className={styles.threadDate}>{formatDateTime(thread.created_at)}</span>
-                          <span className={styles.dot}>·</span>
-                          <span className={styles.fileSize}>{thread.type === 'file' ? 'File' : 'Message'}</span>
-                          {thread.type === 'file' && typeof thread.size === 'number' && (
-                            <>
-                              <span className={styles.dot}>·</span>
-                              <span className={styles.fileSize}>{formatBytes(thread.size)}</span>
-                            </>
-                          )}
                         </div>
                       </div>
                     </div>
                     <div className={styles.threadRight}>
+                      <span className={thread.type === 'file' ? styles.typeChipFile : styles.typeChipMsg}>
+                        {thread.type === 'file' ? (
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                          </svg>
+                        ) : (
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                          </svg>
+                        )}
+                        {thread.type === 'file' ? 'FILE' : 'MSG'}
+                      </span>
+                      {thread.type === 'file' && typeof thread.size === 'number' && (
+                        <span className={styles.metaSize}>{formatBytes(thread.size)}</span>
+                      )}
+                      <span className={styles.metaReplies} title={`${thread.comment_count} repl${thread.comment_count === 1 ? 'y' : 'ies'}`}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                        </svg>
+                        {thread.comment_count}
+                      </span>
+                      <span className={styles.metaDate}>{formatDateTime(thread.last_activity)}</span>
                       {thread.scan_status === 'pending' && <span className={styles.scanBadgePending}>Scanning</span>}
                       {thread.scan_status === 'rejected' && <span className={styles.scanBadgeRejected}>Rejected</span>}
                       {canModerate(user, thread.user_id) && (
