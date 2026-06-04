@@ -5,34 +5,63 @@
 }
 
 :root {
-  --bg:          #080b12;
-  --surface:     #0e1320;
-  --surface-2:   #141928;
-  --border:      #1e2640;
-  --border-soft: #18203a;
-  --text:        #dce3f0;
-  --text-muted:  #5a6a8a;
-  --text-dim:    #3a4a6a;
-  --accent:      #3a7bfd;
-  --accent-dim:  rgba(58, 123, 253, 0.12);
-  --accent-hover:#5290ff;
-  --red:         #e5534b;
-  --red-dim:     rgba(229, 83, 75, 0.1);
-  --green:       #3fb950;
-  --green-dim:   rgba(63, 185, 80, 0.1);
-  --yellow:      #d29922;
-  --yellow-dim:  rgba(210, 153, 34, 0.1);
-  --radius:      10px;
+  /* Light (default) — warm neutral, amber accent */
+  --bg:          #f6f5f2;
+  --surface:     #ffffff;
+  --surface-2:   #f0eee9;
+  --surface-3:   #e9e6df;
+  --border:      #e3e0d9;
+  --border-soft: #eceae4;
+  --text:        #1c1a17;
+  --text-muted:  #6b655c;
+  --text-dim:    #9a948a;
+  --accent:      #b5791f;
+  --accent-dim:  rgba(181, 121, 31, 0.12);
+  --accent-hover:#9c6516;
+  --on-accent:   #ffffff;
+  --red:         #c0392b;
+  --red-dim:     rgba(192, 57, 43, 0.10);
+  --green:       #2f8f4e;
+  --green-dim:   rgba(47, 143, 78, 0.10);
+  --yellow:      #b8860b;
+  --yellow-dim:  rgba(184, 134, 11, 0.12);
+  --shadow:      0 1px 2px rgba(20, 18, 15, 0.05), 0 1px 3px rgba(20, 18, 15, 0.07);
+  --radius:      8px;
   --radius-sm:   6px;
+}
+
+[data-theme='dark'] {
+  /* Dark — warm graphite, shared amber accent */
+  --bg:          #16140f;
+  --surface:     #1d1a14;
+  --surface-2:   #25211a;
+  --surface-3:   #2d281f;
+  --border:      #322d24;
+  --border-soft: #28241d;
+  --text:        #e9e4da;
+  --text-muted:  #9b9080;
+  --text-dim:    #6b6253;
+  --accent:      #d99a4e;
+  --accent-dim:  rgba(217, 154, 78, 0.14);
+  --accent-hover:#e8ab63;
+  --on-accent:   #1a1408;
+  --red:         #e06a5c;
+  --red-dim:     rgba(224, 106, 92, 0.12);
+  --green:       #5aa86b;
+  --green-dim:   rgba(90, 168, 107, 0.12);
+  --yellow:      #d4a23a;
+  --yellow-dim:  rgba(212, 162, 58, 0.14);
+  --shadow:      0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
 body {
   margin: 0;
-  font-family: 'Lexend', system-ui, sans-serif;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 #root {

@@ -6,7 +6,7 @@
   padding: 2rem 1rem;
   background: var(--bg);
   background-image:
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(58, 123, 253, 0.08) 0%, transparent 70%);
+    radial-gradient(ellipse 80% 50% at 50% -10%, var(--accent-dim) 0%, transparent 70%);
   position: relative;
 }
 
@@ -54,6 +54,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 2.25rem 2rem;
+  box-shadow: var(--shadow);
 }
 
 .title {
@@ -130,7 +131,7 @@
   width: 100%;
   padding: 0.65rem;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 0.9rem;
   font-weight: 600;
   border: none;

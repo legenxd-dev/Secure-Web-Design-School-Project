@@ -51,7 +51,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text);
-  font-family: 'Lexend', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-size: 0.87rem;
   padding: 0.6rem 0.8rem;
   resize: vertical;
@@ -86,10 +86,10 @@
 .submitBtn {
   padding: 0.38rem 0.9rem;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 0.82rem;
   font-weight: 600;
-  font-family: 'Lexend', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;

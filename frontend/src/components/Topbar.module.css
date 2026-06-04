@@ -43,7 +43,7 @@
   background: none;
   border: none;
   color: var(--text-muted);
-  font-family: 'Lexend', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-size: 0.85rem;
   font-weight: 400;
   padding: 0.4rem 0.7rem;
@@ -78,11 +78,30 @@
   font-family: 'JetBrains Mono', monospace;
 }
 
+.themeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.themeBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .logoutBtn {
   background: none;
   border: 1px solid var(--border);
   color: var(--text-muted);
-  font-family: 'Lexend', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-size: 0.8rem;
   border-radius: var(--radius-sm);
   padding: 0.3rem 0.7rem;

@@ -46,7 +46,7 @@
   background: none;
   border: none;
   color: var(--text-muted);
-  font-family: 'Lexend', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-size: 0.85rem;
   font-weight: 400;
   padding: 0.4rem 0.75rem;
@@ -83,7 +83,7 @@
   background: none;
   border: 1px solid var(--border);
   color: var(--text-muted);
-  font-family: 'Lexend', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-size: 0.8rem;
   border-radius: var(--radius-sm);
   padding: 0.3rem 0.7rem;
@@ -97,7 +97,7 @@
 }
 
 .content {
-  max-width: 760px;
+  max-width: 820px;
   margin: 0 auto;
   padding: 2.5rem 1.5rem;
   display: flex;
@@ -131,10 +131,10 @@
   gap: 0.4rem;
   padding: 0.5rem 1rem;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 0.85rem;
   font-weight: 600;
-  font-family: 'Lexend', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -154,6 +154,7 @@
   border: 1px solid var(--accent);
   border-radius: var(--radius);
   padding: 1.5rem;
+  box-shadow: var(--shadow);
 }
 
 .composeCardHeader {
@@ -174,7 +175,7 @@
   background: none;
   border: 1px solid var(--border);
   color: var(--text-muted);
-  font-family: 'Lexend', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-size: 0.8rem;
   border-radius: var(--radius-sm);
   padding: 0.3rem 0.7rem;
@@ -219,7 +220,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text);
-  font-family: 'Lexend', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-size: 0.9rem;
   padding: 0.6rem 0.8rem;
   outline: none;
@@ -235,7 +236,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text);
-  font-family: 'Lexend', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-size: 0.88rem;
   padding: 0.65rem 0.8rem;
   resize: vertical;
@@ -269,7 +270,7 @@
   border-radius: 4px;
   padding: 0.25rem 0.6rem;
   font-size: 0.8rem;
-  font-family: 'Lexend', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   cursor: pointer;
   margin-right: 0.5rem;
   transition: border-color 0.15s;
@@ -320,10 +321,10 @@
 .postBtn {
   padding: 0.5rem 1.25rem;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 0.85rem;
   font-weight: 600;
-  font-family: 'Lexend', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -346,6 +347,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
+  box-shadow: var(--shadow);
 }
 
 .empty {
@@ -485,11 +487,11 @@
   letter-spacing: 0.05em;
   text-transform: uppercase;
   padding: 0.15rem 0.45rem;
-  border-radius: 9999px;
+  border-radius: var(--radius-sm);
   flex-shrink: 0;
-  background: rgba(234, 179, 8, 0.12);
-  color: #ca8a04;
-  border: 1px solid rgba(234, 179, 8, 0.3);
+  background: var(--yellow-dim);
+  color: var(--yellow);
+  border: 1px solid var(--yellow-dim);
 }
 
 .scanBadgeRejected {
@@ -498,11 +500,11 @@
   letter-spacing: 0.05em;
   text-transform: uppercase;
   padding: 0.15rem 0.45rem;
-  border-radius: 9999px;
+  border-radius: var(--radius-sm);
   flex-shrink: 0;
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--red-dim);
   color: var(--red);
-  border: 1px solid rgba(239, 68, 68, 0.25);
+  border: 1px solid var(--red-dim);
 }
 
 /* Thread body */
@@ -551,7 +553,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text-muted);
-  font-family: 'Lexend', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-size: 0.78rem;
   border-radius: var(--radius-sm);
   cursor: pointer;
