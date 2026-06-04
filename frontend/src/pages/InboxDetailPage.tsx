@@ -79,7 +79,7 @@ export default function InboxDetailPage() {
 
         <section className={styles.card}>
           <div className={styles.header}>
-            <h1 className={styles.title}>{otherUser ? otherUser.sender_username : 'Private Message'}</h1>
+            <h1 className={styles.title}>{otherUser ? otherUser.sender_username : 'Message'}</h1>
           </div>
 
           {error && <ErrorMessage message={error} onRetry={fetchMessages} />}

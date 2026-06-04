@@ -30,7 +30,7 @@ export default function Topbar({ active }: Props) {
         <nav className={styles.nav}>
           <button className={active === 'profile' ? styles.navActive : styles.navItem} onClick={() => navigate('/profile')}>Profile</button>
           <button className={active === 'threads' ? styles.navActive : styles.navItem} onClick={() => navigate('/threads')}>Threads</button>
-          <button className={active === 'inbox' ? styles.navActive : styles.navItem} onClick={() => navigate('/inbox')}>DM Inbox</button>
+          <button className={active === 'inbox' ? styles.navActive : styles.navItem} onClick={() => navigate('/inbox')}>Inbox</button>
           <button className={active === 'scan' ? styles.navActive : styles.navItem} onClick={() => navigate('/scan')}>File Scanner</button>
         </nav>
 

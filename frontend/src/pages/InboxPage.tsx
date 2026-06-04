@@ -8,12 +8,6 @@ import { getApiError } from '../utils/apiError';
 import { formatDateTime } from '../utils/date';
 import styles from './Messages.module.css';
 
-interface PublicUser {
-  id: number;
-  username: string;
-  avatar: string | null;
-}
-
 interface DmThread {
   id: number;
   other_user_id: number;
@@ -29,12 +23,11 @@ interface DmThread {
 export default function InboxPage() {
   const navigate = useNavigate();
   const [threads, setThreads] = useState<DmThread[]>([]);
-  const [users, setUsers] = useState<PublicUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState('');
 
   const [composing, setComposing] = useState(false);
-  const [receiverId, setReceiverId] = useState('');
+  const [receiverUsername, setReceiverUsername] = useState('');
   const [content, setContent] = useState('');
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState('');
@@ -42,12 +35,8 @@ export default function InboxPage() {
   const fetchInbox = useCallback(async () => {
     setListError('');
     try {
-      const [dmRes, usersRes] = await Promise.all([
-        apiClient.get<DmThread[]>('/api/dms'),
-        apiClient.get<PublicUser[]>('/api/users'),
-      ]);
+      const dmRes = await apiClient.get<DmThread[]>('/api/dms');
       setThreads(dmRes.data);
-      setUsers(usersRes.data);
     } catch (err) {
       setListError(getApiError(err));
     } finally {
@@ -61,15 +50,15 @@ export default function InboxPage() {
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
-    if (!receiverId || !content.trim()) return;
+    if (!receiverUsername.trim() || !content.trim()) return;
     setPostError('');
     setPosting(true);
     try {
       const res = await apiClient.post<DmThread>('/api/dms', {
-        receiver_id: Number(receiverId),
+        receiver_username: receiverUsername.trim(),
         content,
       });
-      setReceiverId('');
+      setReceiverUsername('');
       setContent('');
       setComposing(false);
       navigate(`/inbox/${res.data.id}`);
@@ -87,8 +76,8 @@ export default function InboxPage() {
       <main className={styles.content}>
         <div className={styles.pageHeader}>
           <div>
-            <h1 className={styles.pageTitle}>DM Inbox</h1>
-            <p className={styles.pageDesc}>Send private one-to-one messages to other users.</p>
+            <h1 className={styles.pageTitle}>Inbox</h1>
+            <p className={styles.pageDesc}>Send direct messages to other users.</p>
           </div>
           {!composing && (
             <button className={styles.newBtn} onClick={() => setComposing(true)}>
@@ -96,7 +85,7 @@ export default function InboxPage() {
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
-              New DM
+              New Message
             </button>
           )}
         </div>
@@ -104,29 +93,27 @@ export default function InboxPage() {
         {composing && (
           <div className={styles.composeCard}>
             <div className={styles.composeCardHeader}>
-              <h2 className={styles.composeTitle}>Private Message</h2>
+              <h2 className={styles.composeTitle}>New Message</h2>
               <button className={styles.cancelBtn} onClick={() => { setComposing(false); setPostError(''); }}>Cancel</button>
             </div>
             <form onSubmit={handleSend} className={styles.composeForm}>
               <div className={styles.formGroup}>
-                <label className={styles.label}>Recipient</label>
-                <select
+                <label className={styles.label}>Username</label>
+                <input
                   className={styles.input}
-                  value={receiverId}
-                  onChange={(e) => setReceiverId(e.target.value)}
+                  type="text"
+                  placeholder="Type the recipient username"
+                  value={receiverUsername}
+                  onChange={(e) => setReceiverUsername(e.target.value)}
+                  maxLength={30}
                   required
-                >
-                  <option value="">Select a user</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>{u.username}</option>
-                  ))}
-                </select>
+                />
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Message</label>
                 <textarea
                   className={styles.textarea}
-                  placeholder="Write a private message..."
+                  placeholder="Write a message..."
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   maxLength={5000}
@@ -137,8 +124,8 @@ export default function InboxPage() {
               </div>
               {postError && <ErrorMessage message={postError} />}
               <div className={styles.composeActions}>
-                <button className={styles.postBtn} type="submit" disabled={posting || !receiverId || !content.trim()}>
-                  {posting ? 'Sending...' : 'Send Message'}
+                <button className={styles.postBtn} type="submit" disabled={posting || !receiverUsername.trim() || !content.trim()}>
+                  {posting ? 'Sending...' : 'Send'}
                 </button>
               </div>
             </form>
@@ -150,7 +137,7 @@ export default function InboxPage() {
           {loading ? (
             <p className={styles.empty}>Loading...</p>
           ) : threads.length === 0 ? (
-            <p className={styles.empty}>No private messages yet.</p>
+            <p className={styles.empty}>No messages yet.</p>
           ) : (
             <div className={styles.threadList}>
               {threads.map((thread) => (

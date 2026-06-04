@@ -69,19 +69,26 @@ export async function getDmThreads(req: Request, res: Response): Promise<void> {
 }
 
 export async function createDm(req: Request, res: Response): Promise<void> {
-  const { receiver_id: receiverIdRaw, content } = req.body as {
+  const { receiver_id: receiverIdRaw, receiver_username: receiverUsernameRaw, content } = req.body as {
     receiver_id?: number;
+    receiver_username?: string;
     content?: string;
   };
-  const receiverId = Number(receiverIdRaw);
   const senderId = req.user!.sub;
+  const safeReceiverUsername = cleanText(receiverUsernameRaw ?? '');
   const safeContent = cleanText(content ?? '');
 
-  if (!Number.isInteger(receiverId) || receiverId <= 0) {
+  const receiverIdFromBody = Number(receiverIdRaw);
+
+  if (!receiverIdRaw && !safeReceiverUsername) {
     res.status(400).json({ error: 'Receiver is required' });
     return;
   }
-  if (receiverId === senderId) {
+  if (!safeReceiverUsername && (!Number.isInteger(receiverIdFromBody) || receiverIdFromBody <= 0)) {
+    res.status(400).json({ error: 'Receiver is required' });
+    return;
+  }
+  if (!safeReceiverUsername && receiverIdFromBody === senderId) {
     res.status(400).json({ error: 'You cannot send a private message to yourself' });
     return;
   }
@@ -94,9 +101,23 @@ export async function createDm(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const receiver = await pool.query('SELECT id FROM users WHERE id = $1', [receiverId]);
-  if (receiver.rows.length === 0) {
-    res.status(404).json({ error: 'Receiver not found' });
+  const receiver = safeReceiverUsername
+    ? await pool.query<{ id: number }>(
+      'SELECT id FROM users WHERE LOWER(username) = LOWER($1)',
+      [safeReceiverUsername],
+    )
+    : await pool.query<{ id: number }>(
+      'SELECT id FROM users WHERE id = $1',
+      [receiverIdFromBody],
+    );
+
+  const receiverId = receiver.rows[0]?.id;
+  if (!receiverId) {
+    res.status(404).json({ error: 'No user found with that username' });
+    return;
+  }
+  if (receiverId === senderId) {
+    res.status(400).json({ error: 'You cannot send a private message to yourself' });
     return;
   }
 

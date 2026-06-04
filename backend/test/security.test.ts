@@ -354,4 +354,21 @@ describe('security behavior', () => {
     assert.equal(res.status, 400);
     assert.equal(res.body.error, 'You cannot send a private message to yourself');
   });
+
+  it('returns a clear error when a private message username does not exist', async () => {
+    const results = [
+      { rows: [{ password_version: 0, role: 'user' }] },
+      { rows: [] },
+    ];
+    mockQuery(async () => results.shift() ?? { rows: [] });
+
+    const res = await request(app)
+      .post('/api/dms')
+      .set('Origin', FRONTEND_ORIGIN)
+      .set('Cookie', authCookie(1, 0))
+      .send({ receiver_username: 'missing_user', content: 'hello' });
+
+    assert.equal(res.status, 404);
+    assert.equal(res.body.error, 'No user found with that username');
+  });
 });
