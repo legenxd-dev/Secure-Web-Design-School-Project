@@ -25,22 +25,28 @@ interface ThreadRow {
 
 export async function getThreads(_req: Request, res: Response): Promise<void> {
   const result = await pool.query<ThreadRow>(`
+    WITH comment_agg AS (
+      SELECT post_type, post_id, COUNT(*)::INTEGER AS cnt, MAX(created_at) AS last
+      FROM comments GROUP BY post_type, post_id
+    )
     SELECT 'message' AS type, m.id, m.user_id, u.username, u.avatar, m.title,
            m.content, NULL::TEXT AS description, NULL::TEXT AS original_name,
            NULL::TEXT AS mime_type, NULL::INTEGER AS size, NULL::TEXT AS scan_status,
            m.created_at,
-           (SELECT COUNT(*)::INTEGER FROM comments c WHERE c.post_type = 'message' AND c.post_id = m.id) AS comment_count,
-           GREATEST(m.created_at, (SELECT MAX(c.created_at) FROM comments c WHERE c.post_type = 'message' AND c.post_id = m.id)) AS last_activity
+           COALESCE(agg.cnt, 0) AS comment_count,
+           GREATEST(m.created_at, agg.last) AS last_activity
     FROM messages m
     JOIN users u ON u.id = m.user_id
+    LEFT JOIN comment_agg agg ON agg.post_type = 'message' AND agg.post_id = m.id
     UNION ALL
     SELECT 'file' AS type, f.id, f.user_id, u.username, u.avatar, f.title,
            NULL::TEXT AS content, f.description, f.original_name,
            f.mime_type, f.size, f.scan_status, f.created_at,
-           (SELECT COUNT(*)::INTEGER FROM comments c WHERE c.post_type = 'file' AND c.post_id = f.id) AS comment_count,
-           GREATEST(f.created_at, (SELECT MAX(c.created_at) FROM comments c WHERE c.post_type = 'file' AND c.post_id = f.id)) AS last_activity
+           COALESCE(agg.cnt, 0) AS comment_count,
+           GREATEST(f.created_at, agg.last) AS last_activity
     FROM files f
     JOIN users u ON u.id = f.user_id
+    LEFT JOIN comment_agg agg ON agg.post_type = 'file' AND agg.post_id = f.id
     ORDER BY last_activity DESC
     LIMIT 200
   `);

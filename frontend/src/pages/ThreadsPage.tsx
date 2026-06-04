@@ -8,6 +8,8 @@ import UserAvatar from '../components/UserAvatar';
 import { getApiError } from '../utils/apiError';
 import { formatDateTime } from '../utils/date';
 import { canModerate } from '../utils/permissions';
+import { formatBytes } from '../utils/format';
+import { MAX_THREAD_FILE_SIZE, POLLING_INTERVAL_MS } from '../constants/limits';
 import styles from './Files.module.css';
 
 type ThreadType = 'message' | 'file';
@@ -28,14 +30,6 @@ interface Thread {
   created_at: string;
   comment_count: number;
   last_activity: string;
-}
-
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export default function ThreadsPage() {
@@ -92,7 +86,7 @@ export default function ThreadsPage() {
           // Polling is best-effort; the detail page can refresh status too.
         }
       }
-    }, 5000);
+    }, POLLING_INTERVAL_MS);
 
     return () => clearInterval(interval);
   }, [threads, user?.id]);
@@ -113,7 +107,7 @@ export default function ThreadsPage() {
       setSelectedFile(null);
       return;
     }
-    if (file.size > MAX_FILE_SIZE) {
+    if (file.size > MAX_THREAD_FILE_SIZE) {
       setPostError('File must be smaller than 10 MB');
       setSelectedFile(null);
       if (inputRef.current) inputRef.current.value = '';

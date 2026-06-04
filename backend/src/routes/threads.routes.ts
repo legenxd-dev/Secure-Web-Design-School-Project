@@ -1,33 +1,15 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import multer, { FileFilterCallback } from 'multer';
-import path from 'path';
+import multer from 'multer';
 import { requireAuth } from '../middleware/auth.middleware';
 import { uploadLimiter } from '../middleware/rateLimiters';
 import { createThread, deleteThread, getThreadById, getThreads } from '../controllers/threads.controller';
 import { getComments, postComment, deleteComment } from '../controllers/comments.controller';
-
-const BLOCKED_EXTENSIONS = new Set([
-  '.exe', '.dll', '.so', '.dylib',
-  '.sh', '.bash', '.zsh',
-  '.bat', '.cmd', '.ps1', '.psm1', '.vbs', '.vbe', '.wsf',
-  '.php', '.php3', '.php4', '.php5', '.phtml',
-  '.asp', '.aspx', '.jsp',
-  '.jar', '.war',
-]);
-
-function fileFilter(_req: Request, file: Express.Multer.File, cb: FileFilterCallback): void {
-  const ext = path.extname(file.originalname).toLowerCase();
-  if (BLOCKED_EXTENSIONS.has(ext)) {
-    cb(new Error('File type not allowed'));
-    return;
-  }
-  cb(null, true);
-}
+import { fileFilter, MAX_UPLOAD_BYTES } from '../utils/fileFilter';
 
 const threadUpload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024,
+    fileSize: MAX_UPLOAD_BYTES,
     files: 1,
   },
   fileFilter,

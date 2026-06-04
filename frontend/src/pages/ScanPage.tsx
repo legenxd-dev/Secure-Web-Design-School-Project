@@ -1,6 +1,8 @@
 import React, { useRef, useState } from 'react';
 import apiClient from '../api/client';
 import Topbar from '../components/Topbar';
+import { formatBytes } from '../utils/format';
+import { MAX_SCAN_FILE_SIZE } from '../constants/limits';
 import styles from './Scan.module.css';
 
 interface EngineResult {
@@ -28,14 +30,6 @@ interface ScanResult {
   message?: string;
 }
 
-const MAX_FILE_SIZE = 32 * 1024 * 1024;
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
 function verdict(stats: ScanStats): 'malicious' | 'suspicious' | 'clean' {
   if (stats.malicious > 0) return 'malicious';
   if (stats.suspicious > 0) return 'suspicious';
@@ -56,7 +50,7 @@ export default function ScanPage() {
   function selectFile(f: File) {
     setError('');
     setResult(null);
-    if (f.size > MAX_FILE_SIZE) {
+    if (f.size > MAX_SCAN_FILE_SIZE) {
       setError('File must be smaller than 32 MB');
       return;
     }

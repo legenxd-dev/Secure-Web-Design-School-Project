@@ -20,6 +20,7 @@ import {
   resourceTypeForMime,
   uploadBufferToCloudinary,
 } from '../utils/cloudinary';
+import { logger } from '../utils/logger';
 
 const FILES_DIR = path.join(process.cwd(), 'uploads', 'files');
 
@@ -224,7 +225,7 @@ export async function uploadFile(req: Request, res: Response): Promise<void> {
     if (uploadRes.status === 200) {
       analysisId = (uploadRes.data as VTUploadResponse).data.id;
     } else {
-      console.warn('[files] VT upload failed with status', uploadRes.status);
+      logger.warn('[files] VT upload failed with status', uploadRes.status);
       res.status(502).json({ error: `VirusTotal upload failed (HTTP ${uploadRes.status})` });
       return;
     }
@@ -259,7 +260,7 @@ export async function uploadFile(req: Request, res: Response): Promise<void> {
     const file = (await pool.query<FileRow>(`${SELECT_FILES} WHERE f.id = $1`, [insertResult.rows[0].id])).rows[0];
     res.status(201).json(file);
   } catch (err) {
-    console.error('[files] upload error:', err instanceof Error ? err.message : err);
+    logger.error('[files] upload error:', err instanceof Error ? err.message : err);
     res.status(502).json({ error: 'File scan or storage failed. File was not accepted.' });
   }
 }
@@ -343,7 +344,7 @@ export async function checkFileScanStatus(req: Request, res: Response): Promise<
     );
     res.json({ status: 'clean' });
   } catch (err) {
-    console.error('[files] scan status check error:', err instanceof Error ? err.message : err);
+    logger.error('[files] scan status check error:', err instanceof Error ? err.message : err);
     res.json({ status: 'pending' });
   }
 }

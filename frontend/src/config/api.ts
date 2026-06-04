@@ -1,5 +1,3 @@
-const RENDER_API_ORIGIN = 'https://secure-web-design-school-project.onrender.com';
-
 function isVercelHost(): boolean {
   return typeof window !== 'undefined' && window.location.hostname.endsWith('.vercel.app');
 }
@@ -13,5 +11,3 @@ export function apiBaseUrl(): string {
     import.meta.env.PROD ? window.location.origin : 'http://localhost:4000'
   );
 }
-
-export { RENDER_API_ORIGIN };

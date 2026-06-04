@@ -8,6 +8,8 @@ import UserAvatar from '../components/UserAvatar';
 import { getApiError } from '../utils/apiError';
 import { formatDateTime } from '../utils/date';
 import { canModerate } from '../utils/permissions';
+import { formatBytes } from '../utils/format';
+import { MAX_THREAD_FILE_SIZE, POLLING_INTERVAL_MS } from '../constants/limits';
 import styles from './Files.module.css';
 
 interface SharedFile {
@@ -22,14 +24,6 @@ interface SharedFile {
   size: number;
   scan_status: 'clean' | 'pending' | 'rejected';
   created_at: string;
-}
-
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export default function FilesPage() {
@@ -80,7 +74,7 @@ export default function FilesPage() {
           }
         } catch { /* ignore */ }
       }
-    }, 5000);
+    }, POLLING_INTERVAL_MS);
 
     return () => clearInterval(interval);
   }, [files, user?.id]);
@@ -89,7 +83,7 @@ export default function FilesPage() {
     setUploadError('');
     const f = e.target.files?.[0];
     if (!f) return;
-    if (f.size > MAX_FILE_SIZE) {
+    if (f.size > MAX_THREAD_FILE_SIZE) {
       setUploadError('File must be smaller than 10 MB');
       return;
     }

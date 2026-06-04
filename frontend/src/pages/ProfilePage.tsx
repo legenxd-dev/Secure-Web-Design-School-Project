@@ -7,10 +7,10 @@ import Topbar from '../components/Topbar';
 import ErrorMessage from '../components/ErrorMessage';
 import { getApiError } from '../utils/apiError';
 import { apiBaseUrl } from '../config/api';
+import { MAX_AVATAR_SIZE } from '../constants/limits';
 import styles from './Profile.module.css';
 
 const AVATAR_BASE = `${apiBaseUrl()}/uploads/avatars/`;
-const MAX_FILE_SIZE = 2 * 1024 * 1024;
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 export default function ProfilePage() {
@@ -72,7 +72,7 @@ export default function ProfilePage() {
       setUploadError('Only JPEG, PNG, and WebP images are allowed');
       return;
     }
-    if (file.size > MAX_FILE_SIZE) {
+    if (file.size > MAX_AVATAR_SIZE) {
       setUploadError('File must be smaller than 2 MB');
       return;
     }

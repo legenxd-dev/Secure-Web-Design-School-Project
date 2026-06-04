@@ -313,6 +313,11 @@
   margin-bottom: 0.2rem;
 }
 
+.scanBannerIcon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
 .scanSpinner {
   width: 14px;
   height: 14px;

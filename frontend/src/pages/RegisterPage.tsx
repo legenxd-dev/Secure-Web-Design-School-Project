@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
+import { REDIRECT_DELAY_MS } from '../constants/limits';
 import styles from './Auth.module.css';
 
 export default function RegisterPage() {
@@ -34,7 +35,7 @@ export default function RegisterPage() {
     try {
       await apiClient.post('/api/auth/register', { username, email, password });
       setSuccess('Account created! Redirecting…');
-      setTimeout(() => navigate('/login'), 1500);
+      setTimeout(() => navigate('/login'), REDIRECT_DELAY_MS);
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { error?: string; errors?: string[] } } };
       const data = axiosErr.response?.data;

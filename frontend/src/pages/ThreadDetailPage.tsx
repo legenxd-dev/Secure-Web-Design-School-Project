@@ -9,6 +9,9 @@ import UserAvatar from '../components/UserAvatar';
 import { getApiError } from '../utils/apiError';
 import { formatDateTime } from '../utils/date';
 import { canModerate } from '../utils/permissions';
+import { formatBytes } from '../utils/format';
+import { isImage, isText, isPdf, isVideo, isAudio, isPreviewable } from '../utils/mimeTypes';
+import { POLLING_INTERVAL_MS, URL_REVOKE_DELAY_MS } from '../constants/limits';
 import styles from './Detail.module.css';
 
 type ThreadType = 'message' | 'file';
@@ -35,25 +38,6 @@ interface FileThread {
   size: number;
   scan_status: 'clean' | 'pending' | 'rejected';
   created_at: string;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function isImage(mime: string) { return mime.startsWith('image/'); }
-function isText(mime: string) {
-  return mime.startsWith('text/') ||
-    mime === 'application/json' ||
-    mime === 'application/xml';
-}
-function isPdf(mime: string) { return mime === 'application/pdf'; }
-function isVideo(mime: string) { return mime.startsWith('video/'); }
-function isAudio(mime: string) { return mime.startsWith('audio/'); }
-function isPreviewable(mime: string) {
-  return isImage(mime) || isText(mime) || isPdf(mime) || isVideo(mime) || isAudio(mime);
 }
 
 function FilePreview({ file }: { file: FileThread }) {
@@ -168,7 +152,7 @@ export default function ThreadDetailPage() {
       } catch {
         // Keep the current status if polling fails.
       }
-    }, 5000);
+    }, POLLING_INTERVAL_MS);
 
     return () => clearInterval(interval);
   }, [thread, threadType, user?.id]);
@@ -196,7 +180,7 @@ export default function ThreadDetailPage() {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), URL_REVOKE_DELAY_MS);
       })
       .catch((err) => setDownloadError(getApiError(err)));
   }
@@ -287,7 +271,7 @@ export default function ThreadDetailPage() {
 
                   {thread.scan_status === 'rejected' && (
                     <div className={styles.scanBannerRejected}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={styles.scanBannerIcon}>
                         <circle cx="12" cy="12" r="10" />
                         <line x1="12" y1="8" x2="12" y2="12" />
                         <line x1="12" y1="16" x2="12.01" y2="16" />
