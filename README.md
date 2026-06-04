@@ -19,8 +19,9 @@ The project is intentionally security-focused: the code demonstrates authenticat
 
 - Register / Login: account creation, sign in, logout
 - Profile Management: profile update, avatar upload, password change
-- Messaging: posts and comments between authenticated users
-- File Sharing: upload, list, preview/download after clean scan
+- Threads: public message and file threads with comments
+- DM Inbox: private one-to-one messages between authenticated users
+- File Sharing: upload, list, preview/download after clean scan inside Threads
 - File Scanner: standalone VirusTotal scan workflow
 
 ## Setup
@@ -72,6 +73,11 @@ The frontend runs on `http://localhost:5173`.
 | PATCH | `/api/users/me` | Yes | Update username/email |
 | POST | `/api/users/me/password` | Yes | Change password |
 | POST | `/api/users/me/avatar` | Yes | Upload avatar |
+| GET | `/api/users` | Yes | List users for private messages |
+| GET/POST | `/api/threads` | Yes | List/create public message or file threads |
+| GET/POST | `/api/threads/:type/:id/comments` | Yes | List/create comments for a public thread |
+| GET/POST | `/api/dms` | Yes | List/create private one-to-one conversations |
+| GET/POST | `/api/dms/:id/messages` | Yes | Read/reply to private messages |
 | GET/POST | `/api/messages` | Yes | List/create posts |
 | GET/POST | `/api/messages/:id/comments` | Yes | List/create comments |
 | GET/POST | `/api/files` | Yes | List/upload shared files |

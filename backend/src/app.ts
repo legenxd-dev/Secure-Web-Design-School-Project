@@ -13,6 +13,8 @@ import userRoutes from './routes/user.routes';
 import scanRoutes from './routes/scan.routes';
 import messagesRoutes from './routes/messages.routes';
 import filesRoutes from './routes/files.routes';
+import threadsRoutes from './routes/threads.routes';
+import dmsRoutes from './routes/dms.routes';
 
 const app = express();
 
@@ -55,8 +57,10 @@ app.use('/api', apiLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/scan', uploadLimiter, scanRoutes);
+app.use('/api/threads', threadsRoutes);
 app.use('/api/messages', messagesRoutes);
 app.use('/api/files', filesRoutes);
+app.use('/api/dms', dmsRoutes);
 
 app.use(
   '/uploads/avatars',

@@ -111,6 +111,36 @@ export async function initDb(): Promise<void> {
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_type, post_id)
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS dm_threads (
+      id          SERIAL PRIMARY KEY,
+      user_one_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      user_two_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at  TIMESTAMPTZ DEFAULT NOW(),
+      updated_at  TIMESTAMPTZ DEFAULT NOW(),
+      CHECK (user_one_id < user_two_id),
+      UNIQUE (user_one_id, user_two_id)
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS dm_messages (
+      id         SERIAL PRIMARY KEY,
+      thread_id  INTEGER NOT NULL REFERENCES dm_threads(id) ON DELETE CASCADE,
+      sender_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      content    TEXT    NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_dm_threads_users ON dm_threads(user_one_id, user_two_id)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_dm_messages_thread_created ON dm_messages(thread_id, created_at)
+  `);
 }
 
 export default pool;

@@ -4,10 +4,10 @@ import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
-import MessagesPage from './pages/MessagesPage';
-import MessageDetailPage from './pages/MessageDetailPage';
-import FilesPage from './pages/FilesPage';
-import FileDetailPage from './pages/FileDetailPage';
+import ThreadsPage from './pages/ThreadsPage';
+import ThreadDetailPage from './pages/ThreadDetailPage';
+import InboxPage from './pages/InboxPage';
+import InboxDetailPage from './pages/InboxDetailPage';
 import ScanPage from './pages/ScanPage';
 
 export default function App() {
@@ -19,10 +19,14 @@ export default function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/messages" element={<MessagesPage />} />
-            <Route path="/messages/:id" element={<MessageDetailPage />} />
-            <Route path="/files" element={<FilesPage />} />
-            <Route path="/files/:id" element={<FileDetailPage />} />
+            <Route path="/threads" element={<ThreadsPage />} />
+            <Route path="/threads/:type/:id" element={<ThreadDetailPage />} />
+            <Route path="/inbox" element={<InboxPage />} />
+            <Route path="/inbox/:id" element={<InboxDetailPage />} />
+            <Route path="/messages" element={<Navigate to="/threads" replace />} />
+            <Route path="/messages/:id" element={<ThreadDetailPage />} />
+            <Route path="/files" element={<Navigate to="/threads" replace />} />
+            <Route path="/files/:id" element={<ThreadDetailPage />} />
             <Route path="/scan" element={<ScanPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/profile" replace />} />

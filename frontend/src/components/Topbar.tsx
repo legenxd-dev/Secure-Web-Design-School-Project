@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import styles from './Topbar.module.css';
 
-type ActivePage = 'profile' | 'messages' | 'files' | 'scan';
+type ActivePage = 'profile' | 'threads' | 'inbox' | 'scan' | 'messages' | 'files';
 
 interface Props {
   active: ActivePage;
@@ -29,8 +29,8 @@ export default function Topbar({ active }: Props) {
 
         <nav className={styles.nav}>
           <button className={active === 'profile' ? styles.navActive : styles.navItem} onClick={() => navigate('/profile')}>Profile</button>
-          <button className={active === 'messages' ? styles.navActive : styles.navItem} onClick={() => navigate('/messages')}>Messages</button>
-          <button className={active === 'files' ? styles.navActive : styles.navItem} onClick={() => navigate('/files')}>Files</button>
+          <button className={active === 'threads' ? styles.navActive : styles.navItem} onClick={() => navigate('/threads')}>Threads</button>
+          <button className={active === 'inbox' ? styles.navActive : styles.navItem} onClick={() => navigate('/inbox')}>DM Inbox</button>
           <button className={active === 'scan' ? styles.navActive : styles.navItem} onClick={() => navigate('/scan')}>File Scanner</button>
         </nav>
 

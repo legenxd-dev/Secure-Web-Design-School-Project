@@ -327,4 +327,31 @@ describe('security behavior', () => {
     assert.equal(res.status, 422);
     assert.equal(res.body.error, 'File content does not match an allowed image format');
   });
+
+  it('prevents reading a private message thread you do not participate in', async () => {
+    const results = [
+      { rows: [{ password_version: 0, role: 'user' }] },
+      { rows: [] },
+    ];
+    mockQuery(async () => results.shift() ?? { rows: [] });
+
+    const res = await request(app)
+      .get('/api/dms/99/messages')
+      .set('Cookie', authCookie(1, 0));
+
+    assert.equal(res.status, 403);
+  });
+
+  it('prevents sending a private message to yourself', async () => {
+    mockQuery(async () => ({ rows: [{ password_version: 0, role: 'user' }] }));
+
+    const res = await request(app)
+      .post('/api/dms')
+      .set('Origin', FRONTEND_ORIGIN)
+      .set('Cookie', authCookie(1, 0))
+      .send({ receiver_id: 1, content: 'hello' });
+
+    assert.equal(res.status, 400);
+    assert.equal(res.body.error, 'You cannot send a private message to yourself');
+  });
 });

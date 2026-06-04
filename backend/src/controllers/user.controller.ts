@@ -36,6 +36,18 @@ export async function getMe(req: Request, res: Response): Promise<void> {
   res.json(publicUser(user));
 }
 
+export async function getUsers(req: Request, res: Response): Promise<void> {
+  const result = await pool.query<Pick<UserRow, 'id' | 'username' | 'avatar'>>(
+    `SELECT id, username, avatar
+     FROM users
+     WHERE id != $1
+     ORDER BY username ASC
+     LIMIT 100`,
+    [req.user!.sub],
+  );
+  res.json(result.rows);
+}
+
 export async function updateProfile(req: Request, res: Response): Promise<void> {
   const { username, email, role } = req.body as {
     username?: string;

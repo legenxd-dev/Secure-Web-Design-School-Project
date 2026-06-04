@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import { body } from 'express-validator';
-import { getMe, updateProfile, changePassword, uploadAvatar } from '../controllers/user.controller';
+import { getMe, getUsers, updateProfile, changePassword, uploadAvatar } from '../controllers/user.controller';
 import { requireAuth } from '../middleware/auth.middleware';
 import { uploadMiddleware } from '../middleware/upload.middleware';
 import { handleValidationErrors } from '../middleware/validate.middleware';
@@ -10,6 +10,7 @@ import { uploadLimiter } from '../middleware/rateLimiters';
 const router = Router();
 
 router.get('/me', requireAuth, getMe);
+router.get('/', requireAuth, getUsers);
 
 router.patch(
   '/me',
